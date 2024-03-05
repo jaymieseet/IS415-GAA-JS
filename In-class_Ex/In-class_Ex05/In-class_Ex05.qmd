@@ -1,0 +1,103 @@
+---
+title: "In-Class Exercise 5"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# Overview
+
+Exploring an alternative R package to spdep.
+
+# Install and load packages
+
+```{r}
+pacman::p_load(sf, sfdep, tmap, tidyverse)
+```
+
+sfdep allows ppp functions to be formed on sf objects, so we do not need to convert it to a ppp or sp object. Unlike spatstat, we do not need to convert it into a grid or ppp.
+
+# Data
+
+2 Hunan data sets will be used:
+
+-   Hunan, a geospatial data set in ESRI shapefile
+
+-   Hunan_2012, an attribute dataset in csv format
+
+## Importing Geospatial Data
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+We should always check the data in our R environment. The geometry of this layer should be POLYGON.
+
+
+## Import Attribute Data
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+We must check through both data to see whether there are the same fields that will allow us to do the relational join.
+
+## Performing Relational Join
+
+```{r}
+hunan_GDPPC <- left_join(hunan,hunan2012) %>%
+  select(1:4, 7, 15)
+```
+
+We only want to keep the columns that we need for the Hunan GDPPC.
+
+## Choropleth Map for the Distribution of GDP Per Capita, Hunan Province
+
+tm_shape already takes in the spatial data, since our data is already in sf, we do not need to specify tm_shape(hunan$geometry) as the geometry layer will already be read.
+
+```{r}
+tmap_mode("plot")
+tm_shape(hunan_GDPPC) +
+  tm_fill("GDPPC",
+          style = "quantile",
+          palette = 'Blues',
+          title='GDPPC') +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Equal quantile classification")
+```
+# Deriving contiguity weights: Queen's Method
+
+```{r}
+wm_q <- hunan_GDPPC %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb,
+                         style = 'W'),
+         before =1)
+```
+
+before = 1 puts the new column in front
+
+## Computing Global Moran'l
+
+```{r} 
+moranI <- global_moran(wm_q$GDPPC, 
+                       wm_q$nb, 
+                       wm_q$wt) 
+glimpse(moranI)
+```
+## Performing Global Moran'I test
+```{r}
+global_moran_test(wm_q$GDPPC,
+                  wm_q$nb,
+                  wm_q$wt)
+```
+
+## Performing Global Moran'I permutation test
+```{r}
+global_moran_perm(wm_q$GDPPC,
+                  wm_q$nb,
+                  wm_q$wt,
+                  nsim = 99)
+```

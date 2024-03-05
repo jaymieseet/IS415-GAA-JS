@@ -1,0 +1,114 @@
+---
+title: "Hands-on Exercise 4"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse, knitr)
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+```{r}
+hunan <- left_join(hunan,hunan2012)%>%
+  select(1:4, 7, 15)
+```
+when we left_join, it append everything from the hunan2012 to hunan. the select allow us to explicitly select the columns that we want. simeplfeatures have a geometric column, so if we inspect the hunan data now, we have 7 variables.
+
+```{r}
+basemap <- tm_shape(hunan) +
+  tm_polygons() +
+  tm_text("NAME_3", size=0.5)
+
+gdppc <- qtm(hunan, "GDPPC")
+tmap_arrange(basemap, gdppc, asp=1, ncol=2)
+```
+qtm is a quick way to view our map data (plotting hunan and GDPPC), do not need to specify any classification methods. But a better way to plot a thematic map is to use all the tmap properties to define the style.
+
+The plotting does not start until tm_polygons(). tm_text() is to add labelling on your map. tmap_arrange() allows us to put all the maps together in one whole view.
+
+```{r}
+wm_q <- poly2nb(hunan, queen=TRUE)
+```
+wm_q is a list and this list indicates the neighbours of each polygon. 
+
+```{r}
+summary(wm_q)
+```
+This shows the summary of the lists. even though the average number of links have a decimal place, the number of actual neighbours should be an integer, so we can round up or round down.
+
+The top row of numbers is the number of neighbours and the bottom row is the number of geographical area. eg. there is only 1 geographical area with 11 neighbours.
+
+Area 30 and 65 have the least number of links. Area 85 have the most number of links.
+
+```{r}
+wm_r <- poly2nb(hunan, queen=FALSE)
+summary(wm_r)
+```
+
+
+```{r}
+#coords <- coordinates(hunan)
+k1 <- knn2nb(knearneigh(coords))
+k1dists <- unlist(nbdists(k1, coords, longlat = TRUE))
+summary(k1dists)
+```
+returns the neighbour list, based on their distance. Input is k1 coordinates.
+
+use the largest distance to determine the cut off, always round up and not round down to not miss out any points.In this case, our cut-off distance will be 62.
+
+```{r}
+wm_d62 <- dnearneigh(coords, 0, 62, longlat = TRUE)
+wm_d62
+```
+
+```{r}
+plot(hunan$geometry, border="lightgrey")
+plot(wm_d62, coords, add=TRUE)
+plot(k1, coords, add=TRUE, col="red", length=0.08)
+```
+
+```{r}
+b_weights <- lapply(wm_q, function(x) 0*x + 1)
+b_weights2 <- nb2listw(wm_q, 
+                       glist = b_weights, 
+                       style = "B")
+b_weights2
+```
+
+In-class exercise
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse, knitr,GWmodel)
+```
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+hunan <- left_join(hunan,hunan2012)%>%
+  select(1:4, 7, 15)
+```
+
+```{r}
+wn_d62 <- dnearneigh(coords,0,62, longlat = TRUE)
+hunan_sp <- hunan %>%
+  as_Spatial()
+```
+it is a complex data model and there is no geometric data
+
+```{r}
+gwstat <- gwss(data = hunan_sp,
+               vars = "GDPPC",
+               bw=6,
+               kernel = "bisquare",
+               adaptive = TRUE,
+               longlat = T)
+```
+bandwidth and adaptive have to match. if adaptive = TRUE, bw = 6 (neighbours), if it is false, bw will equal to 62 (kilometres)
+
+plot the map and try with fixed distance

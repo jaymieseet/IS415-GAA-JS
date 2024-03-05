@@ -1,0 +1,136 @@
+---
+title: "In-class_Ex03"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+Installing maptools and other packages
+
+```{r}
+#| eval: false
+install.packages("maptools", repos = "https://packagemanager.posit.co/cran/2023-10-13")
+```
+
+```{r}
+pacman::p_load(maptools, sf, raster, spatstat, tmap, tidyverse)
+```
+
+Importing the data we currently have: Take not that the Child Care Service data is in WGS84 projection, so we need to use st_transform(crs=3414) to change it to the correct projection system All projection should be standardised!
+
+```{r}
+childcare_sf <- st_read("data/geospatial/ChildCareServices.geojson") %>%
+  st_transform(crs = 3414)
+mpsz_sf <- st_read(dsn = "data/geospatial", 
+                layer = "MP14_SUBZONE_WEB_PL")
+```
+
+```{r}
+mpsz_sf
+```
+
+We can derive the CostalOutline from the Master Plan 2014 Subzone data
+
+```{r}
+plot(mpsz_sf)
+```
+
+By plotting mpsz_sf, we can see the map that we want to derive the CostalOutline from. In order to get the outline, we have to dissolve away the boundaries of the subzones (Combine the polygons together) \*
+
+-   st_combine() does not dissolve the boundary, but only combines the polygons (the output is one whole giant polygon)
+-   st_union() dissolves the boundary, and we can choose the specific attributes that we want to dissolve (eg. by subzones or by planning area). The polygons are still individual as they are not combined.
+
+```{r}
+sg_sf <- mpsz_sf %>%
+  st_union()
+```
+
+Now the polygons should be combined!
+
+```{r}
+plot(sg_sf)
+```
+
+"Spatstat" is an R package designed for analyzing spatial point patterns, commonly encountered in fields like ecology, epidemiology, and geospatial statistics. In the context of spatstat, "ppp" stands for "point pattern," and it is a specific format within spatstat used to represent point patterns.
+
+When working with spatstat, your spatial data needs to be converted into the "ppp" format, which is the expected input format for many spatstat functions. This format includes not just the coordinates of points but also additional information about the pattern, such as marks assigned to each point.
+
+Convert the sf dataframe to ppp that conforms to the spastat standard Check the duplication in a ppp object! When dealing with georeferenced locations using postal code, grouping of multiple locations under a single postal code is possible.
+
+```{r}
+childcare_ppp <- as.ppp(childcare_sf)
+any(duplicated(childcare_ppp))
+```
+
+Creating ***owin*** object: sf method
+
+```{r}
+sg_owin <- as.owin(sg_sf)
+```
+
+Note that it has to be in sf format. Anything that uses the 'as' function needs to be in sf format.
+
+The code chunk below will be used to extract the target planning areas use the sf layer to use diplyr filter
+
+```{r}
+pg <- mpsz_sf %>%
+  filter(PLN_AREA_N == "PUNGGOL")
+tm <- mpsz_sf %>%
+  filter(PLN_AREA_N == "TAMPINES")
+ck <- mpsz_sf %>%
+  filter(PLN_AREA_N == "CHOA CHU KANG")
+jw <- mpsz_sf %>%
+  filter(PLN_AREA_N == "JURONG WEST")
+```
+
+Plotting out the target planning areas
+
+```{r}
+par(mfrow=c(2,2))
+plot(pg, main = "Punggol")
+plot(tm, main = "Tampines")
+plot(ck, main = "Choa Chu Kang")
+plot(jw, main = "Jurong West")
+```
+
+'main' is used to label the planning areas
+
+```{r}
+class(mpsz_sf)
+```
+
+```{r}
+pacman::p_load(sp, sf, rgdal, spNetwork, tmap)
+network <- st_read(dsn="data/geospatial", 
+                   layer="Punggol_St")
+childcare <- st_read(dsn="data/geospatial",
+                     layer="Punggol_CC")
+```
+
+Always plot the dots (points) then the lines (polygons), if not the polygons will block the points
+
+```{r}
+tmap_mode('view')
+tm_shape(childcare) + 
+  tm_dots() + 
+  tm_shape(network) +
+  tm_lines()
+```
+
+```{r}
+lixels <- lixelize_lines(network, 
+                         700, 
+                         mindist = 350)
+```
+
+Length of a lixel, *lx_length* is set to 750cm Minimum length of a lixel, *mindist* is set to 375cm (it should be half of the length)
+
+densities \<- nkde(network, events = childcare, w = rep(1,nrow(childcare)), samples = samples, kernel_name = "quartic", bw = 300, div= "bw", method = "simple", digits = 1, tol = 1, grid_shape = c(1,1), max_depth = 8, agg = 5, #we aggregate events within a 5m radius (faster calculation) sparse = TRUE, verbose = FALSE)
+
+shows us which road segment explicitly have more childcare centres instead of the general density of the area. It is useful for decision making, for example, deciding where to place traffic crossings to minimise road congestion.

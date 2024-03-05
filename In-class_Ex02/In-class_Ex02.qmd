@@ -1,0 +1,107 @@
+---
+title: "In-class Exercise 2"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# fd1. Getting Started
+
+## 1.1. Installing R packages into R environment
+
+The packages used for this exercise are:
+
+-   lubridate
+-   arrow
+-   tidyverse
+-   tmap
+-   sf
+
+```{r}
+#| eval: false
+pacman::p_load(sf, tmap, tidyverse, lubridate, arrow)
+```
+
+Importing GrabPosisi Dataset with arrow package
+
+```{r}
+#| eval: false
+df <- read_parquet("data/GrabPosisi/part-00000-8bbff892-97d2-4011-9961-703e38972569.c000.snappy.parquet")
+```
+
+Converting the data type of pingtimestamp from character to date-time
+
+This code overwrites the field characteristics in the df. Before, the data type in int, but after this code chuck, it should change to POSIXct
+
+```{r}
+#| eval: false
+df$pingtimestamp <- as_datetime(df$pingtimestamp)
+```
+
+Extracting the trip origin location
+
+1.  Group them according to the trajectory.
+
+2.  Arrange them according to the pingtimestamp, sorted in ascending order
+
+3.  Every trip that we generate, the first one should be the origin, so filter row_number()==1
+
+4.  Mutate to derive new variables, weekday, start_hr and day.
+
+    -   *wday, hour and mdaylabel = true is to label the day of the week, if not it will just be labelled as 1, 2, 3, 4*
+    -   *factor to put it into ordinal scale (hour, minute, second)*
+
+    *\*More information on the parameters found on the tidyverse reference page*
+
+```{r}
+#| eval: false
+origin_df <- df%>%
+  group_by(trj_id) %>%
+  arrange(pingtimestamp) %>%
+  filter(row_number()==1) %>%
+  mutate(weekday = wday(pingtimestamp, 
+                        label=TRUE, 
+                        abbr=TRUE), 
+         start_hr = factor(hour(pingtimestamp)), 
+         day= factor(mday(pingtimestamp)))
+```
+
+Extracting trip destination locations
+
+Similar to the code before, but arrange it in descending order
+
+```{r}
+#| eval: false
+destination_df <- df%>%
+  group_by(trj_id) %>%
+  arrange(desc(pingtimestamp)) %>%
+  filter(row_number()==1) %>%
+  mutate(weekday = wday(pingtimestamp, 
+                        label=TRUE, 
+                        abbr=TRUE), 
+         end_hr = factor(hour(pingtimestamp)), 
+         day= factor(mday(pingtimestamp)))
+```
+
+Save it in r datafile format because it will save all the object class eg. the weekday, start_hr fields that we created, so that we can reuse it in the future.
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(origin_df, "data/rds/origin_df.rds")
+write_rds(destination_df, "data/rds/destination_df.rds")
+```
+
+When we want to restart on this file, import back the data
+
+```{r}
+#| eval: false 
+origin_df <- read_rds("data/rds/origin_df.rds")
+destination_df <- read_rds("data/rds/destination_df.rds")
+```
