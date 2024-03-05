@@ -4,6 +4,7 @@ execute:
   eval: true
   echo: true
   warning: false
+  freeze: true
 date: "`r Sys.Date()`"
 ---
 
@@ -33,8 +34,8 @@ sfdep allows ppp functions to be formed on sf objects, so we do not need to conv
 hunan <- st_read(dsn = "data/geospatial", 
                  layer = "Hunan")
 ```
-We should always check the data in our R environment. The geometry of this layer should be POLYGON.
 
+We should always check the data in our R environment. The geometry of this layer should be POLYGON.
 
 ## Import Attribute Data
 
@@ -55,7 +56,7 @@ We only want to keep the columns that we need for the Hunan GDPPC.
 
 ## Choropleth Map for the Distribution of GDP Per Capita, Hunan Province
 
-tm_shape already takes in the spatial data, since our data is already in sf, we do not need to specify tm_shape(hunan$geometry) as the geometry layer will already be read.
+tm_shape already takes in the spatial data, since our data is already in sf, we do not need to specify tm_shape(hunan\$geometry) as the geometry layer will already be read.
 
 ```{r}
 tmap_mode("plot")
@@ -67,6 +68,7 @@ tm_shape(hunan_GDPPC) +
   tm_borders(alpha = 0.5) +
   tm_layout(main.title = "Equal quantile classification")
 ```
+
 # Deriving contiguity weights: Queen's Method
 
 ```{r}
@@ -81,13 +83,15 @@ before = 1 puts the new column in front
 
 ## Computing Global Moran'l
 
-```{r} 
+```{r}
 moranI <- global_moran(wm_q$GDPPC, 
                        wm_q$nb, 
                        wm_q$wt) 
 glimpse(moranI)
 ```
+
 ## Performing Global Moran'I test
+
 ```{r}
 global_moran_test(wm_q$GDPPC,
                   wm_q$nb,
@@ -95,6 +99,7 @@ global_moran_test(wm_q$GDPPC,
 ```
 
 ## Performing Global Moran'I permutation test
+
 ```{r}
 global_moran_perm(wm_q$GDPPC,
                   wm_q$nb,
