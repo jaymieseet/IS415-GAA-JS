@@ -1,0 +1,9 @@
+---
+title: "Hands On Exercise 8"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+date: "`r Sys.Date()`"
+---

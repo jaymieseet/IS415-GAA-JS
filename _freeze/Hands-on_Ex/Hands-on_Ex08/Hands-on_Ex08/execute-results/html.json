@@ -1,0 +1,14 @@
+{
+  "hash": "ffa295b7662b87897bfe7a82602433ea",
+  "result": {
+    "markdown": "---\ntitle: \"Hands On Exercise 8\"\nexecute: \n  eval: true\n  echo: true\n  warning: false\n  freeze: true\ndate: \"2024-03-10\"\n---\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

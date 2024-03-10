@@ -1,0 +1,9 @@
+---
+title: "Take-home Exercise 3"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+date: "`r Sys.Date()`"
+---
