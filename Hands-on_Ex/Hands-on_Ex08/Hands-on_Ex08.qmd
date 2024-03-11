@@ -409,8 +409,7 @@ In multiple linear regression, it is important for us to test the assumption tha
 
 In the code chunk below, the [`ols_plot_resid_fit()`](https://olsrr.rsquaredacademy.com/reference/ols_plot_resid_fit.html) of **olsrr** package is used to perform linearity assumption test.
 
-```         
-{r}
+```{r}
 ols_plot_resid_fit(condo.mlr1)
 ```
 
@@ -420,18 +419,15 @@ The figure above reveals that most of the data poitns are scattered around the 0
 
 Lastly, the code chunk below uses [`ols_plot_resid_hist()`](https://olsrr.rsquaredacademy.com/reference/ols_plot_resid_hist.html) of *olsrr* package to perform normality assumption test.
 
-```         
-
-{r}
-ls_plot_resid_hist(condo.mlr1)
+```{r}
+ols_plot_resid_hist(condo.mlr1)
 ```
 
 The figure reveals that the residual of the multiple linear regression model (i.e. condo.mlr1) is resemble normal distribution.
 
 If you prefer formal statistical test methods, the [`ols_test_normality()`](https://olsrr.rsquaredacademy.com/reference/ols_test_normality.html) of **olsrr** package can be used as shown in the code chun below.
 
-```         
-{r}
+```{r}
 ols_test_normality(condo.mlr1)
 ```
 
@@ -445,15 +441,13 @@ In order to perform spatial autocorrelation test, we need to convert *condo_resa
 
 First, we will export the residual of the hedonic pricing model and save it as a data frame.
 
-```         
-{r}
+```{r}
 mlr.output <- as.data.frame(condo.mlr1$residuals)
 ```
 
 Next, we will join the newly created data frame with *condo_resale.sf* object.
 
-```         
-{r}
+```{r}
 condo_resale.res.sf <- cbind(condo_resale.sf,                          condo.mlr1$residuals) %>% rename(`MLR_RES` = `condo.mlr1.residuals`)
 ```
 
@@ -461,9 +455,9 @@ Next, we will convert *condo_resale.res.sf* from simple feature object into a Sp
 
 The code chunk below will be used to perform the data conversion process.
 
-```         
-{r}
-condo_resale.sp <- as_Spatial(condo_resale.res.sf) condo_resale.sp
+```{r}
+condo_resale.sp <- as_Spatial(condo_resale.res.sf) 
+condo_resale.sp
 ```
 
 The summary table above reveals that the p-values of the four tests are way smaller than the alpha value of 0.05. Hence we will reject the null hypothesis and infer that there is statistical evidence that the residual are not normally distributed.
@@ -476,13 +470,13 @@ In order to perform spatial autocorrelation test, we need to convert *condo_resa
 
 First, we will export the residual of the hedonic pricing model and save it as a data frame.
 
-```         
+```{r}         
 mlr.output <- as.data.frame(condo.mlr1$residuals)
 ```
 
 Next, we will join the newly created data frame with *condo_resale.sf* object.
 
-```         
+```{r}         
 condo_resale.res.sf <- cbind(condo_resale.sf,                          condo.mlr1$residuals) %>% rename(`MLR_RES` = `condo.mlr1.residuals`)
 ```
 
@@ -490,23 +484,22 @@ Next, we will convert *condo_resale.res.sf* from simple feature object into a Sp
 
 The code chunk below will be used to perform the data conversion process.
 
-```         
-condo_resale.sp <- as_Spatial(condo_resale.res.sf) condo_resale.sp
+```{r}         
+condo_resale.sp <- as_Spatial(condo_resale.res.sf) 
+condo_resale.sp
 ```
 
 Next, we will use **tmap** package to display the distribution of the residuals on an interactive map.
 
 The code churn below will turn on the interactive mode of tmap.
 
-```         
-{r}
+```{r}
 tmap_mode("view")
 ```
 
 The code chunks below is used to create an interactive point symbol map.
 
-```         
-{r}
+```{r}
 tm_shape(mpsz_svy21)+
   tmap_options(check.and.fix = TRUE) +
   tm_polygons(alpha = 0.4) +
@@ -519,8 +512,7 @@ tm_shape(condo_resale.res.sf) +
 
 Remember to switch back to “plot” mode before continue.
 
-```         
-{r}
+```{r}
 tmap_mode("plot")
 ```
 
@@ -530,22 +522,21 @@ To proof that our observation is indeed true, the Moran’s I test will be perfo
 
 First, we will compute the distance-based weight matrix by using [`dnearneigh()`](https://r-spatial.github.io/spdep/reference/dnearneigh.html) function of **spdep**.
 
-```         
-{r}
-nb <- dnearneigh(coordinates(condo_resale.sp), 0, 1500, longlat = FALSE) summary(nb)
+```{r}
+nb <- dnearneigh(coordinates(condo_resale.sp), 0, 1500, longlat = FALSE)
+summary(nb)
 ```
 
 Next, [`nb2listw()`](https://r-spatial.github.io/spdep/reference/nb2listw.html) of **spdep** packge will be used to convert the output neighbours lists (i.e. nb) into a spatial weights.
 
-```         
-{r}
-nb_lw <- nb2listw(nb, style = 'W') summary(nb_lw)
+```{r}
+nb_lw <- nb2listw(nb, style = 'W') 
+summary(nb_lw)
 ```
 
 Next, [`lm.morantest()`](https://r-spatial.github.io/spdep/reference/lm.morantest.html) of **spdep** package will be used to perform Moran’s I test for residual spatial autocorrelation
 
-```         
-{r}
+```{r}
 lm.morantest(condo.mlr1, nb_lw)
 ```
 
@@ -565,8 +556,7 @@ In the code chunk below `bw.gwr()` of GWModel package is used to determine the o
 
 There are two possible approaches can be uused to determine the stopping rule, they are: CV cross-validation approach and AIC corrected (AICc) approach. We define the stopping rule using ***approach*** argeement.{r
 
-```         
-{r}
+```{r}
 bw.fixed <- bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + 
                      PROX_CHILDCARE + PROX_ELDERLYCARE  + PROX_URA_GROWTH_AREA + 
                      PROX_MRT   + PROX_PARK + PROX_PRIMARY_SCH + 
@@ -583,8 +573,7 @@ bw.fixed <- bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD +
 
 Now we can use the code chunk below to calibrate the gwr model using fixed bandwidth and gaussian kernel.
 
-```         
-{r}
+```{r}
 gwr.fixed <- gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + 
                          PROX_CHILDCARE + PROX_ELDERLYCARE  + PROX_URA_GROWTH_AREA + 
                          PROX_MRT   + PROX_PARK + PROX_PRIMARY_SCH + 
@@ -598,8 +587,7 @@ gwr.fixed <- gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD +
 
 The output is saved in a list of class “gwrm”. The code below can be used to display the model output.
 
-```         
-{r}
+```{r}
 gwr.fixed
 ```
 
@@ -615,8 +603,7 @@ Similar to the earlier section, we will first use `bw.gwr()` to determine the re
 
 The code chunk used look very similar to the one used to compute the fixed bandwidth except the `adaptive` argument has changed to **TRUE**.
 
-```         
-{r}
+```{r}
 bw.adaptive <- bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE  + 
                         PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE    + 
                         PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + 
@@ -631,8 +618,21 @@ bw.adaptive <- bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE  +
 
 The code below can be used to display the model output.
 
-```         
-{r}
+#### Constructing the adaptive bandwidth gwr model
+
+```{r}
+gwr.adaptive <- gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE + 
+                            PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE + 
+                            PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + 
+                            PROX_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_BUS_STOP + 
+                            NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD, 
+                          data=condo_resale.sp, bw=bw.adaptive, 
+                          kernel = 'gaussian', 
+                          adaptive=TRUE, 
+                          longlat = FALSE)
+```
+
+```{r}
 gwr.adaptive
 ```
 
@@ -658,25 +658,24 @@ They are all stored in a SpatialPointsDataFrame or SpatialPolygonsDataFrame obje
 
 To visualise the fields in **SDF**, we need to first covert it into **sf** data.frame by using the code chunk below.
 
-```         
-{r}
+```{r}
 condo_resale.sf.adaptive <- st_as_sf(gwr.adaptive$SDF) %>%   st_transform(crs=3414)
 ```
 
-```         
-{r}
-condo_resale.sf.adaptive.svy21 <- st_transform(condo_resale.sf.adaptive, 3414) condo_resale.sf.adaptive.svy21  
+```{r}
+condo_resale.sf.adaptive.svy21 <- st_transform(condo_resale.sf.adaptive, 3414) 
+condo_resale.sf.adaptive.svy21  
 ```
 
-```         
-{r}
-gwr.adaptive.output <- as.data.frame(gwr.adaptive$SDF) condo_resale.sf.adaptive <- cbind(condo_resale.res.sf, as.matrix(gwr.adaptive.output))
+```{r}
+gwr.adaptive.output <- as.data.frame(gwr.adaptive$SDF) 
+condo_resale.sf.adaptive <- cbind(condo_resale.res.sf, 
+                                  as.matrix(gwr.adaptive.output))
 ```
 
 Next, `glimpse()` is used to display the content of *condo_resale.sf.adaptive* sf data frame.
 
-```         
-{r}
+```{r}
 glimpse(condo_resale.sf.adaptive)
 ```
 
