@@ -320,7 +320,7 @@ Matrix reorder is very important for mining the hiden structure and patter in th
 
 From the scatterplot matrix, it is clear that ***Freehold*** is highly correlated to ***LEASE_99YEAR***. In view of this, it is wiser to only include either one of them in the subsequent model building. As a result, ***LEASE_99YEAR*** is excluded in the subsequent model building.
 
-### **13.8.3 Building a hedonic pricing model using multiple linear regression method**
+### Building a hedonic pricing model using multiple linear regression method**
 
 The code chunk below using `lm()` to calibrate the multiple linear regression model.
 

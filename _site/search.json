@@ -817,5 +817,19 @@
     "title": "Hands On Exercise 8",
     "section": "Visualising coefficient estimates",
     "text": "Visualising coefficient estimates\nThe code chunks below is used to create an interactive point symbol map.\n\ntmap_mode(\"view\")\nAREA_SQM_SE <- tm_shape(mpsz_svy21)+\n  tm_polygons(alpha = 0.1) +\ntm_shape(condo_resale.sf.adaptive) +  \n  tm_dots(col = \"AREA_SQM_SE\",\n          border.col = \"gray60\",\n          border.lwd = 1) +\n  tm_view(set.zoom.limits = c(11,14))\n\nAREA_SQM_TV <- tm_shape(mpsz_svy21)+\n  tm_polygons(alpha = 0.1) +\ntm_shape(condo_resale.sf.adaptive) +  \n  tm_dots(col = \"AREA_SQM_TV\",\n          border.col = \"gray60\",\n          border.lwd = 1) +\n  tm_view(set.zoom.limits = c(11,14))\n\ntmap_arrange(AREA_SQM_SE, AREA_SQM_TV, \n             asp=1, ncol=2,\n             sync = TRUE)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ntmap_mode(\"plot\")\n\n\nBy URA Planning Region\n\ntm_shape(mpsz_svy21[mpsz_svy21$REGION_N==\"CENTRAL REGION\", ])+\n  tm_polygons()+\ntm_shape(condo_resale.sf.adaptive) + \n  tm_bubbles(col = \"Local_R2\",\n           size = 0.15,\n           border.col = \"gray60\",\n           border.lwd = 1)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html",
+    "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html",
+    "title": "Hands On Exercise 8",
+    "section": "",
+    "text": "pacman::p_load(olsrr, corrplot, ggpubr, sf, spdep, GWmodel, tmap, tidyverse, gtsummary, ggstatsplot)\nWithout using ggstatsplot, we will have to calculate a correlation matrix but using ggcoormat, we do not need to.\nSELLING Price is dependent variable\nUsually the output gives us all the information not formatted, so the gtsummary package allows us to format it in a html table to make thie information more comprehensible. By default, there is no intercept row, but we can add it in."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#visualising-model-parameters",
+    "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#visualising-model-parameters",
+    "title": "Hands On Exercise 8",
+    "section": "Visualising model parameters",
+    "text": "Visualising model parameters\nVisualise the confidence interval clearer than using the table format.\n\nmlr.p <- ggcoefstats(condo.mlr, sort = \"ascending\")\nmlr.p\n\n\n\n\n\ncondo_resale.res.sf <- cbind(condo_resale.sf,                          condo.mlr$residuals) %>% rename(`MLR_RES` = `condo.mlr.residuals`)\n\nThere are may parameters that we can customise in this visualisation to present the modelling results better. If the variable falls after the line, it means that there is an inverse relation with the dependent variable (positive or negative Beta value).\n\ncondo_resale.sp <- as_Spatial(condo_resale.res.sf) \ncondo_resale.sp\n\nclass       : SpatialPointsDataFrame \nfeatures    : 1436 \nextent      : 14940.85, 43352.45, 24765.67, 48382.81  (xmin, xmax, ymin, ymax)\ncrs         : +proj=tmerc +lat_0=1.36666666666667 +lon_0=103.833333333333 +k=1 +x_0=28001.642 +y_0=38744.572 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs \nvariables   : 22\nnames       : POSTCODE, SELLING_PRICE, AREA_SQM, AGE,    PROX_CBD, PROX_CHILDCARE, PROX_ELDERLYCARE, PROX_URA_GROWTH_AREA, PROX_HAWKER_MARKET, PROX_KINDERGARTEN,    PROX_MRT,   PROX_PARK, PROX_PRIMARY_SCH, PROX_TOP_PRIMARY_SCH, PROX_SHOPPING_MALL, ... \nmin values  :    18965,        540000,       34,   0, 0.386916393,    0.004927023,      0.054508623,          0.214539508,        0.051817113,       0.004927023, 0.052779424, 0.029064164,      0.077106132,          0.077106132,                  0, ... \nmax values  :   828833,       1.8e+07,      619,  37, 19.18042832,     3.46572633,      3.949157205,           9.15540001,        5.374348075,       2.229045366,  3.48037319,  2.16104919,      3.928989144,          6.748192062,        3.477433767, ..."
   }
 ]
