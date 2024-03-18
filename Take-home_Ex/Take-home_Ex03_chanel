@@ -1,0 +1,335 @@
+---
+title: "Take-home Exercise 3: Application of Spatial and Spatio-temporal Analysis Methods to Discover the Distribution of Dengue Fever in Tainan City, Taiwan"
+execute: 
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# Checking data
+
+```{r}
+pacman::p_load(sf, spded, sfdep, tmap, tidyverse, plotly, Kendall)
+```
+
+# Importing Geospatial Data
+
+```{r}
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                 layer = "idn_admbnda_adm3_bps_20200401")
+```
+
+Extracting only West Java regions
+
+```{r}
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+```
+
+```{r}
+west_java <- st_transform(west_java, crs = 23830)
+```
+
+```{r}
+plot(st_geometry(west_java))
+```
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+```
+
+```{r}
+head(indo_earthquake)
+```
+
+```{r}
+# Convert to sf object 
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+```
+
+```{r}
+indoEarthq_filter <- indoEarthq_sf %>%                 
+filter(tgl >= as.Date("2019/01/01") & tgl <= as.Date("2023/12/31"))
+```
+
+```{r}
+# Group by the 'remark' column and calculate the count of each type
+remark_counts <- indoEarthq_filter %>%   group_by(remark) %>%   
+  summarise(count = n())  
+# View the resulting count of each type in the 'remark' column 
+```
+
+```{r}
+# Sort the data frame by count in descending order and select the top 10 rows 
+top_10_remark <- remark_counts %>%   
+  arrange(desc(count)) %>%   
+  head(10)  
+# Plot a bar graph 
+ggplot(top_10_remark, 
+       aes(x = remark, y = count)) +   
+       geom_bar(stat = "identity", fill = "skyblue") +
+       labs(title = "Top 10 Region Eathquake Count", 
+       x = "Region",     
+       y = "Count") +
+       theme_minimal() +   
+       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+plot(st_geometry(indoEarthq_sf))
+```
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_filter, west_java)
+java_earthq
+```
+
+Point with Polygon Join: If west_java contains polygon geometries and java_earthq contains point geometries, and you perform a spatial join to find points within polygons, the resulting dataset will likely have polygon geometries. This is because the join operation will match points to polygons, resulting in the polygons being retained.
+
+```{r}
+java_eq_left <- st_join(west_java, java_earthq) %>%
+  rename(ADM3_EN = ADM3_EN.x)
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(west_java)+
+  tm_polygons()+
+  tm_shape(java_earthq)+
+  tm_dots()
+```
+
+```{r}
+java_earthq_count <- java_eq_left %>%
+  group_by(ADM3_EN) %>%
+  summarize(num_rows_in_group = n())
+```
+
+```{r}
+# Plot choropleth map
+tm_shape(java_earthq_count) +
+  tm_polygons("num_rows_in_group", palette = "Blues", title = "Earthquake Count") +
+  tm_layout(title = "Choropleth Map of Earthquake Count in West Java")
+```
+
+# Global Spatial Autocorrelation
+
+Spatial autocorrelation is the term used to describe the presence of systematic spatial variation in a variable.
+
+Hypotheses:
+
+-   Null Hypothesis: The map suggests that the seismic activity in West Java occurred randomly over space. (complete spatial randomness)
+
+-   Alternative Hypothesis: The map suggests that the seismic activity in West Java occurred in a non-random pattern over space (spatially clustered)
+
+```{r}
+wm_q <- java_earthq_count %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb,
+                         style = "W"),
+         .before = 1) 
+```
+
+```{r}
+wm_q
+```
+
+## Computing Global Moran I
+
+```{r}
+moranI <- global_moran(wm_q$num_rows_in_group,
+                       wm_q$nb,
+                       wm_q$wt)
+glimpse(moranI)
+```
+
+## Performing Global Moran’sI test
+
+```{r}
+global_moran_test(wm_q$num_rows_in_group,
+                       wm_q$nb,
+                       wm_q$wt)
+```
+
+## Performing Global Moran’I permutation test
+
+In practice, monte carlo simulation should be used to perform the statistical test. For sfdep, it is supported by globel_moran_perm()
+
+It is alway a good practice to use set.seed() before performing simulation. This is to ensure that the computation is reproducible.
+
+```{r}
+set.seed(1234)
+```
+
+```{r}
+global_moran_perm(wm_q$num_rows_in_group,
+                       wm_q$nb,
+                       wm_q$wt,
+                  nsim = 99)
+```
+
+## Computing local Moran’s I
+
+```{r}
+lisa <- wm_q %>% 
+  mutate(local_moran = local_moran(
+    num_rows_in_group, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+```
+
+## Visualising local Moran’s I
+
+```{r}
+tmap_mode("plot")
+tm_shape(lisa) +
+  tm_fill("ii") + 
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6,8)) +
+  tm_layout(main.title = "local Moran's I of sesismic activity",
+            main.title.size = 0.8)
+```
+
+## Visualising p-value of local Moran’s I
+
+```{r}
+tmap_mode("plot")
+tm_shape(lisa) +
+  tm_fill("p_ii_sim") + 
+  tm_borders(alpha = 0.5) +
+   tm_layout(main.title = "p-value of local Moran's I",
+            main.title.size = 0.8)
+```
+
+## Visuaising local Moran’s I and p-value
+
+Added the variable midpoint=NA to map1 as the variable(s) "ii" contains positive and negative values, which causes midpoint to be set to 0. Therefore, I set midpoint to NA to show the full spectrum of the color palette.
+
+```{r}
+tmap_mode("plot")
+map1 <- tm_shape(lisa) +
+  tm_fill("ii", midpoint = NA) + 
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6,8)) +
+  tm_layout(main.title = "local Moran's I of sesismic activity",
+            main.title.size = 0.8)
+
+map2 <- tm_shape(lisa) +
+  tm_fill("p_ii",
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig")) + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of local Moran's I",
+            main.title.size = 0.8)
+
+tmap_arrange(map1, map2, ncol = 2)
+```
+
+## Visualising LISA map
+
+```{r}
+# attempt 1
+
+lisa_sig <- lisa  %>%
+  filter(p_ii < 0.05)
+tmap_mode("plot")
+tm_shape(lisa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(lisa_sig) +
+  tm_fill("mean") + 
+  tm_borders(alpha = 0.4)
+```
+
+```{r}
+# attempt 2
+
+lisa_sig <- lisa %>%
+  filter(p_ii < 0.05)
+
+tmap_mode("plot")
+tm_shape(lisa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(lisa_sig) +
+  tm_fill("mean") + 
+  tm_borders(alpha = 0.4)
+```
+
+## Hot Spot and Cold Spot Area Analysis (HCSA)
+
+HCSA uses spatial weights to identify locations of statistically significant hot spots and cold spots in an spatially weighted attribute that are in proximity to one another based on a calculated distance. The analysis groups features when similar high (hot) or low (cold) values are found in a cluster. The polygon features usually represent administration boundaries or a custom grid structure.
+
+## Computing local Gi\* statistics
+
+```{r}
+# Assuming java_eq_left is an sf object with geometry column named "geometry"
+java_earthq_count <- java_earthq_count %>%
+  mutate(geometry_point = st_centroid(geometry))  # Convert polygon geometries to point geometries (centroids)
+```
+
+```{r}
+wm_idw <- java_earthq_count %>%
+  mutate(nb = st_contiguity(geometry),
+         wts = st_inverse_distance(nb, geometry_point,
+                                   scale = 1,
+                                   alpha = 1),
+         .before = 1)
+```
+
+```{r}
+HCSA <- wm_idw %>% 
+  mutate(local_Gi = local_gstar_perm(
+    num_rows_in_group, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_Gi)
+HCSA
+```
+
+```{r}
+tmap_mode("plot")
+tm_shape(HCSA) +
+  tm_fill("gi_star") + 
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6,8))
+```
+
+```{r}
+tmap_mode("plot")
+tm_shape(HCSA) +
+  tm_fill("p_sim") + 
+  tm_borders(alpha = 0.5)
+```
+
+```{r}
+tmap_mode("plot")
+map1 <- tm_shape(HCSA) +
+  tm_fill("gi_star") + 
+  tm_borders(alpha = 0.5) +
+  tm_view(set.zoom.limits = c(6,8)) +
+  tm_layout(main.title = "Gi* of GDPPC",
+            main.title.size = 0.8)
+
+map2 <- tm_shape(HCSA) +
+  tm_fill("p_value",
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig")) + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of Gi*",
+            main.title.size = 0.8)
+
+tmap_arrange(map1, map2, ncol = 2)
+```
+
+## Visualising hot spot and cold spot areas
+
+```{r}
+HCSA_sig <- HCSA  %>%
+  filter(p_sim < 0.05)
+tmap_mode("plot")
+tm_shape(HCSA) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(HCSA_sig) +
+  tm_fill("gi_star") + 
+  tm_borders(alpha = 0.4)
+```

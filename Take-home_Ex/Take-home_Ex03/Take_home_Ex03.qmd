@@ -7,3 +7,118 @@ execute:
   freeze: true
 date: "`r Sys.Date()`"
 ---
+
+```{r}
+pacman::p_load(sf, spded, sfdep, tmap, tidyverse, plotly, Kendall)
+```
+
+# Importing Geospatial Data
+
+```{r}
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                 layer = "idn_admbnda_adm3_bps_20200401")
+```
+
+Extracting only West Java regions
+
+```{r}
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+```
+
+```{r}
+west_java <- st_transform(west_java, crs = 23830)
+```
+
+```{r}
+plot(st_geometry(west_java))
+```
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+```
+
+```{r}
+head(indo_earthquake)
+```
+
+```{r}
+# Convert to sf object 
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+```
+
+```{r} 
+indoEarthq_filter <- indoEarthq_sf %>%                 
+filter(tgl >= as.Date("2019/01/01") & tgl <= as.Date("2023/12/31"))
+```
+
+```{r}
+# Group by the 'remark' column and calculate the count of each type
+remark_counts <- indoEarthq_filter %>%   
+  group_by(remark) %>%   
+  summarise(count = n())  
+# View the resulting count of each type in the 'remark' column 
+```
+
+```{r}
+# Sort the data frame by count in descending order and select the top 10 rows 
+top_10_remark <- remark_counts %>%   
+  arrange(desc(count)) %>%   
+  head(10)  
+# Plot a bar graph 
+ggplot(top_10_remark, aes(x = remark, y = count)) +   
+  geom_bar(stat = "identity", fill = "skyblue") +   
+  labs(title = "Top 10 Region Eathquake Count",        
+       x = "Region",        y = "Count") +   
+  theme_minimal() +   
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+```{r}
+plot(st_geometry(indoEarthq_sf))
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(west_java)+
+  tm_polygons()+
+  tm_shape(java_eq_left)+
+  tm_dots()
+```
+
+```{r}
+sum(n_distinct(west_java$ADM3_EN))
+```
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_filter, west_java)
+java_earthq
+```
+
+```{r}
+java_eq_left <- st_join(west_java, java_earthq) %>%
+  rename(ADM2_EN = ADM2_EN.x)
+```
+
+```{r}
+java_earthq_num <- java_eq_left %>%
+  group_by(ADM2_EN) %>%
+  summarize(num_earthquakes = n())
+```
+
+```{r}
+tm_shape(west_java)+
+  tm_polygons()+
+  tm_shape(java_earthq_num)+
+  tm_fill("num_earthquakes", 
+          style = "jenks", 
+          palette = "Blues", 
+          legend.hist = TRUE, 
+          legend.is.portrait = TRUE,
+          legend.hist.z = 0.1)+
+  tm_borders(lwd = 1)
+```
+

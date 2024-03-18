@@ -1,0 +1,174 @@
+---
+title: "Take-home Exercise 3: Application of Spatial and Spatio-temporal Analysis Methods to Discover the Distribution of Dengue Fever in Tainan City, Taiwan"
+execute: 
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# Checking data
+
+```{r}
+pacman::p_load(sf, spded, sfdep, tmap, tidyverse, plotly, Kendall)
+```
+
+# Importing Geospatial Data
+
+```{r}
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                 layer = "idn_admbnda_adm3_bps_20200401")
+```
+
+Extracting only West Java regions
+
+```{r}
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+```
+
+```{r}
+west_java <- st_transform(west_java, crs = 23830)
+```
+
+```{r}
+plot(st_geometry(west_java))
+```
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+```
+
+```{r}
+head(indo_earthquake)
+```
+
+```{r}
+# Convert to sf object 
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+```
+
+```{r}
+indoEarthq_filter <- indoEarthq_sf %>%                 
+filter(tgl >= as.Date("2019/01/01") & tgl <= as.Date("2023/12/31"))
+```
+
+```{r}
+# Group by the 'remark' column and calculate the count of each type
+remark_counts <- indoEarthq_filter %>%   group_by(remark) %>%   
+  summarise(count = n())  
+# View the resulting count of each type in the 'remark' column 
+```
+
+```{r}
+# Sort the data frame by count in descending order and select the top 10 rows 
+top_10_remark <- remark_counts %>%   
+  arrange(desc(count)) %>%   
+  head(10)  
+# Plot a bar graph 
+ggplot(top_10_remark, 
+       aes(x = remark, y = count)) +   
+       geom_bar(stat = "identity", fill = "skyblue") +
+       labs(title = "Top 10 Region Eathquake Count", 
+       x = "Region",     
+       y = "Count") +
+       theme_minimal() +   
+       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+plot(st_geometry(indoEarthq_sf))
+```
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_filter, west_java)
+java_earthq
+```
+```{r}
+length(unique(java_earthq$ADM3_EN))
+```
+
+Point with Polygon Join: If west_java contains polygon geometries and java_earthq contains point geometries, and you perform a spatial join to find points within polygons, the resulting dataset will likely have polygon geometries. This is because the join operation will match points to polygons, resulting in the polygons being retained.
+
+```{r}
+java_earthq <- java_earthq %>%
+  mutate(year = as.character(year(tgl)),
+         month = as.character(month(tgl)))
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(west_java)+
+  tm_polygons()+
+  tm_shape(java_earthq)+
+  tm_dots()
+```
+
+```{r}
+java_earthq_count <- java_earthq %>%
+  group_by(ADM3_EN, year, month) %>%
+  summarize(total_cases = n()) %>%
+  ungroup() %>%
+  st_drop_geometry()
+```
+```{r}
+java_earthq_count <- java_earthq_count %>%
+  mutate(month_year = paste(.$year, .$month, sep = "_")) %>%
+  select(-year, -month)
+```
+
+```{r}
+length(unique(west_java$ADM3_EN))
+```
+```{r}
+sum(duplicated(west_java$ADM3_EN))
+```
+```{r}
+west_java_unique <- distinct(west_java, ADM3_EN, .keep_all = TRUE)
+```
+
+```{r}
+sum(duplicated(west_java_unique$ADM3_EN))
+```
+
+```{r}
+# Create a vector of all months
+months <- sprintf("%02d", 1:12)
+
+# Create a vector of all years
+years <- as.character(2019:2023)
+
+# Create a template dataframe with all possible combinations of regions, years, and months
+template_df <- expand.grid(ADM3_EN = unique(west_java_unique$ADM3_EN),
+                           year = years,
+                           month = months,
+                           stringsAsFactors = FALSE)
+
+# Combine year and month to create month_year column
+template_df$month_year <- paste(template_df$month, template_df$year, sep = "_")
+
+# Remove year and month columns
+template_df <- template_df[, !names(template_df) %in% c("year", "month")]
+
+# Left join with original dataframe
+java_eq_df <- left_join(template_df, java_earthq_count, by = c("ADM3_EN", "month_year"))
+
+# Replace NA values in total cases column with 0
+java_eq_df$total_cases[is.na(java_eq_df$total_cases)] <- 0
+
+```
+
+```{r}
+java_eq_df <- as_tibble(java_eq_df)
+```
+
+```{r}
+#java_eq_df$month_year <- as.yearmon(data$month_year, format = "%m_%Y")
+```
+
+```{r}
+#java_st <- spacetime(.data = java_eq_df, .geo = west_java_unique, "ADM3_EN", "month_year")
+
+#is_spacetime_cube(tainan_st)
+```
+
+```{r}
+```

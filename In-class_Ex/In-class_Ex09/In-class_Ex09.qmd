@@ -1,0 +1,235 @@
+---
+title: "Geographically Weighted Predictive Models"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+date: "`r Sys.Date()`"
+---
+
+```{r}
+pacman::p_load(sf, spdep, GWmodel, SpatialML, 
+               tmap, rsample, tidymodels, Metrics, tidyverse, gtsummary, rpart, rpart.plot, ggstatsplot, performance)
+```
+```{r}
+rs_sf <- read_rds("data/rds/HDB_resale.rds")
+```
+
+Split 50/50 for the training data and the testing data
+```{r}
+set.seed(1234)
+resale_split <- initial_split(rs_sf,
+                             prop = 5/10,)
+train_sf <- training(resale_split)
+test_sf <- testing(resale_split)
+```
+
+resale_split will contain all the data, we do not need to save it as an object if we want to save space because after we split to train and test, it will be useless. Instead, we can use pipelining %>%.
+
+```{r}
+train_df <- train_sf %>%
+  st_drop_geometry() %>%
+  as.data.frame()
+
+test_df <- test_sf %>%
+  st_drop_geometry() %>%
+  as.data.frame()
+```
+We have to read the documentation to know whether we need it in a normal dataframe or tibble dataframe. We use as.data.frame() to create a dataframe, which has 17 columns instead of 18 because we have dropped the geometry column.
+
+## Computing Correlation Matirx 
+
+```{r}
+#| fig-width: 12
+#| fig-height: 12
+
+rs_sf1 <- rs_sf %>% 
+  st_drop_geometry()
+corrplot::corrplot(cor(rs_sf1[, 2:17]), 
+                   diag = FALSE, 
+                   order = "AOE",
+                   tl.pos = "td", 
+                   tl.cex = 0.5, 
+                   method = "number", 
+                   type = "upper")
+```
+
+```{r}
+price_mlr <- lm(formula = RESALE_PRICE ~ FLOOR_AREA_SQM +
+                  STOREY_ORDER + REMAINING_LEASE_MTHS +
+                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
+                  PROX_MRT + PROX_PARK + PROX_MALL + 
+                  PROX_SUPERMARKET + PROX_CHAS + WITHIN_350M_KINDERGARTEN +
+                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +
+                  WITHIN_1KM_PRISCH,
+                data=train_df)
+summary(price_mlr)
+```
+
+## Revising mlr model 
+
+```{r}
+train_df <- train_df %>%
+  select(-c(PROX_CHAS))
+train_sf <- train_sf %>%
+  select(-c(PROX_CHAS))
+test_df <- test_df %>%
+  select(-c(PROX_CHAS))
+test_sf <- test_sf %>%
+  select(-c(PROX_CHAS))
+```
+
+```{r}
+price_mlr <- lm(formula = RESALE_PRICE ~ FLOOR_AREA_SQM +
+                  STOREY_ORDER + REMAINING_LEASE_MTHS +
+                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
+                  PROX_MRT + PROX_PARK + PROX_MALL + 
+                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
+                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +
+                  WITHIN_1KM_PRISCH,
+                data=train_df)
+summary(price_mlr)
+```
+
+Extract te x y coordinates of the full, training and test data sets
+```{r}
+coords <- st_coordinates(rs_sf)
+coords_train <- st_coordinates(train_sf)
+coords_test <- st_coordinates(test_sf)
+```
+The algorithm will require 2 dataset, one is the dataframe that consist of independent and dependent variables. Another separate data table needs to have all the X and Y coordinates (named X and Y columns).
+
+```{r}
+set.seed(1234)
+rs_rp <- rpart(formula = RESALE_PRICE ~ FLOOR_AREA_SQM +
+                  STOREY_ORDER + REMAINING_LEASE_MTHS +
+                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
+                  PROX_MRT + PROX_PARK + PROX_MALL + 
+                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
+                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +
+                  WITHIN_1KM_PRISCH,
+                data=train_df)
+rs_rp
+```
+rs_rp is a collection of pbject that gives us the split result and importance of variables so on. We can then plot the tree to see how it is split.
+
+```{r}
+rpart.plot(rs_rp)
+```
+
+When we use the condition PROX_CBD >= 8, we will split to 2 major groups. The next level is the REMAINING_LEASE_MONTHS. Once we know the conditions, we can use SQL to extract the target response variable.
+
+```{r}
+set.seed(1234)
+rs_rf <- ranger(formula = RESALE_PRICE ~ FLOOR_AREA_SQM +
+                  STOREY_ORDER + REMAINING_LEASE_MTHS +
+                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
+                  PROX_MRT + PROX_PARK + PROX_MALL + 
+                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
+                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +
+                  WITHIN_1KM_PRISCH,
+                data=train_df,
+                importance = "impurity")
+rs_rf
+```
+Using the ranger package is relatively faster, so most of the time we will use this instead of random forest. By default, we use 500 trees. Initially, the importance will be set to none, so we cannot retrieve the importnce. So we need to specify to determine which variable are important in our calculation. Impurity is commonly used in decision trees and regression trees. 
+
+```{r}
+vi <- as.data.frame(rs_rf$variable.importance)
+vi$variables <- rownames(vi)
+vi <- vi %>%
+  rename(vi = "rs_rf$variable.importance")
+```
+
+```{r}
+ggplot(data = vi,
+       aes(x=vi,
+           y=reorder(variables, vi))) #use reorder to sort the bars to view the importance, if not it will be displayed alphabetically +
+  geom_bar(stat="identity")
+```
+
+If we have a model that looks like that it is okay, because there are different importance for each variable. But if the model shows one super long bar for one variable, that means there might be issues with the data that creates a complete separation situation, then we might need to exclude the extreme predictor to be able to analyse the other variables.
+
+We need to calculate the bandwidth and fit it into the model. This will take very long and the data is very big, so we should confine our observations to a certain area, so that we can build an application and it wont hang.
+
+```{r}
+rs_grf <- read_rds("data/models/rs_grf.rds")
+```
+
+```{r}
+test_df <- cbind(test_sf, coords_test) %>%
+  st_drop_geometry()
+```
+
+```{r}
+#| eval: false
+grf_pred <- predict.grf(rs_grf,
+                        test_df,
+                        x.var.name = "X",
+                        y.var.name = "Y",
+                        local.w = 1,
+                        global.w = 0)
+```
+
+```{r}
+grf_pred <- read_rds("data/models/grf_pred.rds")
+grf_pred_df <- as.data.frame(grf_pred)
+```
+
+Append the predicted values onto the test_df
+```{r}
+test_pred <- test_df %>% 
+  select(RESALE_PRICE) %>%
+  cbind(grf_pred_df)
+```
+test_pred will have 2 columns, first one is the resale price and second is the predicted value using the geographical random forest to compare the predicted and actual values. 
+
+```{r}
+rf_pred <- predict(rs_rf, test_df)
+```
+
+```{r}
+rf_pred_df <- as.data.frame(rf_pred$predictions) %>%
+  rename(rf_pred = "rf_pred$predictions")
+```
+
+```{r}
+test_pred <- cbind(test_pred,
+                   rf_pred_df)
+```
+
+```{r}
+mlr_pred <- predict(price_mlr, test_df)
+```
+
+```{r}
+mlr_pred_df <- as.data.frame(mlr_pred) %>%
+  rename(mlr_pred = "mlr_pred")
+```
+
+```{r}
+test_pred <- cbind(test_pred,
+                   mlr_pred_df)
+```
+
+```{r}
+yardstick::rmse(test_pred,
+                RESALE_PRICE,
+                mlr_pred)
+```
+
+```{r}
+mc <- test_pred %>%
+  pivot_longer(cols = c(2:4),
+               names_to = "models",
+               values_to = "predicted")
+```
+This gives us a summary of the statistics. Choose the model that gives us the best prediction.
+
+```{r}
+ggplot(data = test_pred,
+       aes(x = grf_pred,
+           y = RESALE_PRICE)) +
+  geom_point()
+```

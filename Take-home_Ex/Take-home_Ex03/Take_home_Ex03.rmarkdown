@@ -1,0 +1,79 @@
+---
+title: "Take-home Exercise 3"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+date: "`r Sys.Date()`"
+---
+
+```{r}
+pacman::p_load(sf, spded, sfdep, tmap, tidyverse, plotly, Kendall)
+```
+
+
+# Importing Geospatial Data
+
+
+```{r}
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                 layer = "idn_admbnda_adm2_bps_20200401")
+```
+
+
+Extracting only West Java regions
+
+
+```{r}
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+```
+
+```{r}
+west_java <- st_transform(west_java, crs = 23830)
+```
+
+```{r}
+plot(st_geometry(west_java))
+```
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+```
+
+```{r}
+head(indo_earthquake)
+```
+
+```{r}
+# Convert to sf object 
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+```
+
+```{r}
+plot(st_geometry(indoEarthq_sf))
+```
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_sf, west_java)
+java_earthq
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(west_java)+
+  tm_polygons()+
+  tm_shape(java_earthq)+
+  tm_dots()
+```
+
+```{r}
+java_earthq_full <- st_union(west_java, java_earthq) %>%
+  select(1:4, 8, 15:19)
+```
+
+```{r}
+indoEarthq_filter <- java_earthq_full %>%                 
+  filter(tgl >= as.Date("2019/01/01") & tgl <= as.Date("2023/12/31"))
+```
