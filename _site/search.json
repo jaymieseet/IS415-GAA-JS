@@ -989,63 +989,63 @@
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "",
-    "text": "pacman::p_load(tmap, SpatialAcc, sf, \n               ggstatsplot, reshape2,\n               tidyverse)\n\npackage 'SpatialAcc' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\Jaymie\\AppData\\Local\\Temp\\Rtmpk1ccLp\\downloaded_packages"
+    "text": "In this hands-on exercise, you will gain hands-on experience on how to model geographical accessibility by using R’s geospatial analysis packages.\n\n\nBy the end of this hands-on exercise, you will be able:\n\nto import GIS polygon data into R and save them as simple feature data frame by using appropriate functions of sf package of R;\nto import aspatial data into R and save them as simple feature data frame by using appropriate functions of sf package of R;\nto computer accessibility measure by using Hansen’s potential model and Spatial Accessibility Measure (SAM); and\nto visualise the accessibility measures by using tmap and ggplot2 packages.\n\n\n\n\nFour data sets will be used in this hands-on exercise, they are:\n\nMP14_SUBZONE_NO_SEA_PL: URA Master Plan 2014 subzone boundary GIS data. This data set is downloaded from data.gov.sg.\nhexagons: A 250m radius hexagons GIS data. This data set was created by using st_make_grid() of sf package. It is in ESRI shapefile format.\nELDERCARE: GIS data showing location of eldercare service. This data is downloaded from data.gov.sg. There are two versions. One in ESRI shapefile format. The other one in Google kml file format. For the purpose of this hands-on exercise, ESRI shapefile format is provided.\nOD_Matrix: a distance matrix in csv format. There are six fields in the data file. They are:\n\norigin_id: the unique id values of the origin (i.e. fid of hexagon data set.),\ndestination_id: the unique id values of the destination (i.e. fid of ELDERCARE data set.),\nentry_cost: the perpendicular distance between the origins and the nearest road),\nnetwork_cost: the actual network distance from the origin and destination,\nexit_cost: the perpendicular distance between the destination and the nearest road), and\ntotal_cost: the summation of entry_cost, network_cost and exit_cost.\n\n\nAll the values of the cost related fields are in metres.\nReminder: Except MP14_SUBZONE_NO_SEA_PL data set, the other three data set are specially prepared by Prof. Kam for teaching and research purpose. Students taking IS415 Geospatial Analytics and Applications are allowed to use them for hands-on exercise purpose. Please obtain formal approval from Prof. Kam if you want to use them for other courses or usage."
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-hansens-accessibility",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-hansens-accessibility",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Visualising Hansen’s Accessibility",
     "text": "Visualising Hansen’s Accessibility\n\nmapex <- st_bbox(hexagons)\n\n\ntmap_mode(\"plot\")\ntm_shape(hexagon_Hansen,\n         bbox = mapex) + \n  tm_fill(col = \"accHansen\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: Hansen method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 6),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Statistical Graphic Visualisation",
     "text": "Statistical Graphic Visualisation\n\nhexagon_Hansen <- st_join(hexagon_Hansen, mpsz, \n                          join = st_intersects)\n\n\nggplot(data=hexagon_Hansen, \n       aes(y = log(accHansen), \n           x= REGION_N)) +\n  geom_boxplot() +\n  geom_point(stat=\"summary\", \n             fun.y=\"mean\", \n             colour =\"red\", \n             size=2)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-kd2sfcas-accessibility",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-kd2sfcas-accessibility",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Computing KD2SFCA’s accessibility",
     "text": "Computing KD2SFCA’s accessibility\n\nacc_KD2SFCA <- data.frame(ac(hexagons$demand,\n                            eldercare$capacity,\n                            distmat_km, \n                            d0 = 50,\n                            power = 2, \n                            family = \"KD2SFCA\"))\n\ncolnames(acc_KD2SFCA) <- \"accKD2SFCA\"\nacc_KD2SFCA <- tbl_df(acc_KD2SFCA)\nhexagon_KD2SFCA <- bind_cols(hexagons, acc_KD2SFCA)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-kd2sfcas-accessibility",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-kd2sfcas-accessibility",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Visualising KD2SFCA’s accessibility",
     "text": "Visualising KD2SFCA’s accessibility\n\ntmap_mode(\"plot\")\ntm_shape(hexagon_KD2SFCA,\n         bbox = mapex) + \n  tm_fill(col = \"accKD2SFCA\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: KD2SFCA method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 6),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation-1",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation-1",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Statistical Graphic Visualisation",
     "text": "Statistical Graphic Visualisation\n\nhexagon_KD2SFCA <- st_join(hexagon_KD2SFCA, mpsz, \n                          join = st_intersects)\n\n\nggplot(data=hexagon_KD2SFCA, \n       aes(y = accKD2SFCA, \n           x= REGION_N)) +\n  geom_boxplot() +\n  geom_point(stat=\"summary\", \n             fun.y=\"mean\", \n             colour =\"red\", \n             size=2)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-sam-accessibility",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-sam-accessibility",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Computing SAM accessibility",
     "text": "Computing SAM accessibility\n\nacc_SAM <- data.frame(ac(hexagons$demand,\n                         eldercare$capacity,\n                         distmat_km, \n                         d0 = 50,\n                         power = 2, \n                         family = \"SAM\"))\n\ncolnames(acc_SAM) <- \"accSAM\"\nacc_SAM <- tbl_df(acc_SAM)\nhexagon_SAM <- bind_cols(hexagons, acc_SAM)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-sams-accessibility",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-sams-accessibility",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Visualising SAM’s accessibility",
     "text": "Visualising SAM’s accessibility\n\ntmap_mode(\"plot\")\ntm_shape(hexagon_SAM,\n         bbox = mapex) + \n  tm_fill(col = \"accSAM\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: SAM method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 3),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation-2",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation-2",
-    "title": "Hands on Ex 10",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Statistical Graphic Visualisation",
     "text": "Statistical Graphic Visualisation\n\nhexagon_SAM <- st_join(hexagon_SAM, mpsz, \n                       join = st_intersects)\n\n\nggplot(data=hexagon_SAM, \n       aes(y = accSAM, \n           x= REGION_N)) +\n  geom_boxplot() +\n  geom_point(stat=\"summary\", \n             fun.y=\"mean\", \n             colour =\"red\", \n             size=2)"
   },
