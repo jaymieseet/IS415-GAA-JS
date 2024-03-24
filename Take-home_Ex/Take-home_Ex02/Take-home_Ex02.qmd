@@ -43,7 +43,7 @@ The specific tasks of this take-home exercise are as follows:
 # Data Used
 
 | Data Set           | Description                                                                                                      | Source                                                                                                              |
-|--------------------|------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+|---------------|----------------------------|-----------------------------|
 | `TAIWAN_VILLAGE`   | Geospatial data of the village boundary of Taiwan in ESRI shapefile and in Taiwan's Geographic Coordinate System | [Historical map data of the village boundary: TWD97 longitude and latitude](https://data.gov.tw/en/datasets/130549) |
 | `Dengue_Daily.csv` | Aspatial data of reported dengue cases in Taiwan since 1998.                                                     | [Dengue Daily Confirmed Cases Since 1998](https://data.cdc.gov.tw/en/dataset/dengue-daily-determined-cases-1998)    |
 

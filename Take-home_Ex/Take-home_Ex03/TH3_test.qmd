@@ -47,13 +47,8 @@ indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
 ```
 
 ```{r}
-indoEarthq_filter <- indoEarthq_sf %>%                 
-filter(tgl >= as.Date("2019/01/01") & tgl <= as.Date("2023/12/31"))
-```
-
-```{r}
 # Group by the 'remark' column and calculate the count of each type
-remark_counts <- indoEarthq_filter %>%   group_by(remark) %>%   
+remark_counts <- indoEarthq_sf %>%   group_by(remark) %>%   
   summarise(count = n())  
 # View the resulting count of each type in the 'remark' column 
 ```
@@ -79,19 +74,29 @@ plot(st_geometry(indoEarthq_sf))
 ```
 
 ```{r}
-java_earthq <- st_intersection(indoEarthq_filter, west_java)
+west_java$subdistrict <- paste(west_java$ADM3_EN, west_java$ADM2_EN, sep = "_")
+```
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_sf, west_java)
 java_earthq
 ```
+
 ```{r}
-length(unique(java_earthq$ADM3_EN))
+length(unique(java_earthq$subdistrict))
 ```
 
 Point with Polygon Join: If west_java contains polygon geometries and java_earthq contains point geometries, and you perform a spatial join to find points within polygons, the resulting dataset will likely have polygon geometries. This is because the join operation will match points to polygons, resulting in the polygons being retained.
 
 ```{r}
 java_earthq <- java_earthq %>%
-  mutate(year = as.character(year(tgl)),
-         month = as.character(month(tgl)))
+  filter(mag >= 3) %>%
+  mutate(year = as.numeric(year(tgl)),
+         month = month(tgl, label = TRUE, abbr = FALSE),
+         week = as.numeric(week(tgl))) %>%
+  mutate(year_week = paste(year, paste("Week", week, sep = " "), sep = ", ")) %>%
+  filter(year >= 2009, year <= 2023)
+
 ```
 
 ```{r}
@@ -104,23 +109,20 @@ tm_shape(west_java)+
 
 ```{r}
 java_earthq_count <- java_earthq %>%
-  group_by(ADM3_EN, year, month) %>%
+  group_by(subdistrict, year) %>%
   summarize(total_cases = n()) %>%
   ungroup() %>%
   st_drop_geometry()
 ```
+
 ```{r}
-java_earthq_count <- java_earthq_count %>%
-  mutate(month_year = paste(.$year, .$month, sep = "_")) %>%
-  select(-year, -month)
+length(unique(west_java$subdistrict))
 ```
 
 ```{r}
-length(unique(west_java$ADM3_EN))
-```
-```{r}
 sum(duplicated(west_java$ADM3_EN))
 ```
+
 ```{r}
 west_java_unique <- distinct(west_java, ADM3_EN, .keep_all = TRUE)
 ```
@@ -130,30 +132,19 @@ sum(duplicated(west_java_unique$ADM3_EN))
 ```
 
 ```{r}
-# Create a vector of all months
-months <- sprintf("%02d", 1:12)
-
 # Create a vector of all years
-years <- as.character(2019:2023)
+years <- as.numeric(2009:2023)
 
 # Create a template dataframe with all possible combinations of regions, years, and months
-template_df <- expand.grid(ADM3_EN = unique(west_java_unique$ADM3_EN),
+template_df <- expand.grid(subdistrict = unique(west_java$subdistrict),
                            year = years,
-                           month = months,
                            stringsAsFactors = FALSE)
 
-# Combine year and month to create month_year column
-template_df$month_year <- paste(template_df$month, template_df$year, sep = "_")
-
-# Remove year and month columns
-template_df <- template_df[, !names(template_df) %in% c("year", "month")]
-
 # Left join with original dataframe
-java_eq_df <- left_join(template_df, java_earthq_count, by = c("ADM3_EN", "month_year"))
+java_eq_df <- left_join(template_df, java_earthq_count, by = c("subdistrict", "year"))
 
 # Replace NA values in total cases column with 0
 java_eq_df$total_cases[is.na(java_eq_df$total_cases)] <- 0
-
 ```
 
 ```{r}
@@ -161,14 +152,212 @@ java_eq_df <- as_tibble(java_eq_df)
 ```
 
 ```{r}
-#java_eq_df$month_year <- as.yearmon(data$month_year, format = "%m_%Y")
+java_st <- spacetime(.data = java_eq_df, .geo = west_java, "subdistrict", "year")
+
+is_spacetime_cube(java_st)
 ```
 
 ```{r}
-#java_st <- spacetime(.data = java_eq_df, .geo = west_java_unique, "ADM3_EN", "month_year")
-
-#is_spacetime_cube(tainan_st)
+java_nb <- java_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(st_contiguity(geometry)),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
 ```
 
 ```{r}
+gi_stars <- java_nb %>% 
+  group_by(year) %>% 
+  mutate(gi_star = local_gstar_perm(
+    total_cases, nb, wt)) %>% 
+  tidyr::unnest(gi_star)
+```
+
+```{r}
+cbg1 <- gi_stars %>% 
+  ungroup() %>% 
+  filter(subdistrict == "Cugenang_Cianjur") |> 
+  select(subdistrict, year, gi_star)
+
+p <- ggplot(data = cbg1, 
+       aes(x = year, 
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+
+ggplotly(p)
+```
+
+```{r}
+cbg1 %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>% 
+  tidyr::unnest_wider(mk)
+```
+
+```{r}
+ehsa <- gi_stars %>%
+  group_by(subdistrict) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk)
+```
+
+```{r}
+emerging <- ehsa %>% 
+  arrange(sl, abs(tau)) %>% 
+  slice(1:5)
+```
+
+Parameter to be added here would be to very the number of neighbours for the analysis.
+
+```{r}
+ehsa <- emerging_hotspot_analysis(
+  x = java_st, 
+  .var = "total_cases", 
+  k = 1, 
+  nsim = 99
+)
+ggplot(data = ehsa, aes(x = classification)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(data = ehsa, aes(x = classification)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+java_ehsa <- west_java %>%
+  left_join(ehsa,
+            by = join_by(subdistrict == location))
+```
+
+```{r}
+ehsa_sig <- java_ehsa  %>%
+  filter(p_value < 0.05)
+tmap_mode("plot")
+tm_shape(java_ehsa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(ehsa_sig) +
+  tm_fill("classification") + 
+  tm_borders(alpha = 0.4)
+```
+
+# EDA
+
+For this EDA, I used tmaps package to plot the points of the earthquake events, the colour of the points are coloured based on the magnitude of the earthquake event. A colour palette (palette = "Reds") was selected to intuitively convey the severity of earthquakes, with darker shades representing higher magnitudes.
+
+The primary goal is to gain insights into the distribution and characteristics of these seismic events, as well as visualise the change of events across the 15 year period (2009 to 2023).
+
+The different parameters we can choose is the time period:
+
+-   display by year
+
+-   display by month
+
+-   display by week of year
+
+-   show all events
+
+## Show all events
+
+This map below shows all events of earthquake from 2009 to 2023.
+
+```{r}
+tmap_mode('view')  # Define basemaps 
+osm_basemap <- tm_basemap(server = "OpenStreetMap.HOT") 
+imagery_basemap <- tm_basemap(server = "Esri.WorldImagery")
+
+eo_map <- osm_basemap +
+  tm_shape(java_earthq) +
+  tm_symbols(size = 0.8, col = "mag", palette = "Reds", alpha = 1, 
+             popup.vars = c("subdistrict", "year_week"), id = "mag") +
+  tm_layout(title = "Earthquake Events Magnitude") +
+  tm_view(dot.size.fixed = TRUE)
+
+eo_map
+```
+
+## Filter by Year and Week
+
+Since I've incorporated a new column indicating the year and week of each earthquake event, we can implement a slider feature to visualize the evolution of earthquake occurrences throughout the year. As the slider moves across different weeks, the map dynamically updates to display earthquake events for the selected week. If there are no earthquake events recorded for a particular week, the map gracefully renders as empty, providing a clear representation of seismic activity over time.
+
+Given the relatively sparse occurrence of earthquake events within a week, I opted to increase the size of each plotted point to enhance visibility and highlight the significance of each seismic event. By adjusting the size parameter to a higher value of 5, the resulting map provides a clearer and more pronounced representation of earthquake occurrences, ensuring that even minor seismic events are readily discernible to viewers.
+
+```{r}
+tmap_mode('view')  # Define basemaps 
+osm_basemap <- tm_basemap(server = "OpenStreetMap.HOT") 
+imagery_basemap <- tm_basemap(server = "Esri.WorldImagery")
+
+filter_date <- "2010, Week 48"
+
+# Filter the dataset based on the specific year_week value
+filtered_data <- java_earthq %>%
+  filter(year_week == filter_date)
+
+if (nrow(filtered_data) == 0) {
+  # If no rows are filtered, create an empty map or a message
+  empty_map <- osm_basemap +
+    tm_shape(java_earthq) +
+    tm_symbols(alpha = 0, size = 0) +  # Added '+' to separate tm_symbols() from tm_layout()
+    tm_layout(title = paste("No earthquake events for ", filter_date))  # Corrected tm_layout() function
+  
+  empty_map
+} else {
+  # If rows are filtered, create the map with the filtered dataset
+  eo_map <- osm_basemap +
+    tm_shape(filtered_data) +
+    tm_symbols(size = 5, col = "mag", palette = "Reds", alpha = 1, 
+               popup.vars = c("subdistrict", "year_week"), id = "mag", breaks = seq(3, 6.5, by = 0.5)) +
+    tm_layout(title = paste("Earthquake Events Magnitude for ", filter_date))  # Corrected tm_layout() function
+  
+  eo_map
+}
+```
+
+## Filter by Year and Month
+
+The filter can also be set by Year and Month.
+
+```{r}
+tmap_mode('view')  # Define basemaps 
+osm_basemap <- tm_basemap(server = "OpenStreetMap.HOT") 
+imagery_basemap <- tm_basemap(server = "Esri.WorldImagery")
+
+filter_year <- 2010
+filter_month <- "January"
+
+# Filter the dataset based on the specific year_week value
+filtered_data <- java_earthq %>%
+  filter(year == filter_year,
+         month == filter_month)
+
+if (nrow(filtered_data) == 0) {
+  # If no rows are filtered, create an empty map or a message
+  empty_map <- osm_basemap +
+    tm_shape(java_earthq) +
+    tm_symbols(alpha = 0, size = 0) +  # Added '+' to separate tm_symbols() from tm_layout()
+    tm_layout(title = paste("No earthquake events for ", filter_date))  # Corrected tm_layout() function
+  
+  empty_map
+} else {
+  # If rows are filtered, create the map with the filtered dataset
+  eo_map <- osm_basemap +
+    tm_shape(filtered_data) +
+    tm_symbols(size = 5, col = "mag", palette = "Reds", alpha = 1, 
+               popup.vars = c("subdistrict", "year_week"), id = "mag", breaks = seq(3, 6.5, by = 0.5)) +
+    tm_layout(title = paste("Earthquake Events Magnitude for ", filter_date))  # Corrected tm_layout() function
+  
+  eo_map
+}
 ```
