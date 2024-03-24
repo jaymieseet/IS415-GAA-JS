@@ -155,9 +155,21 @@ Notice that for the purpose of this hands-on exercise, a constant value of 100 i
 
 # Aspatial Data Wrangling
 
+## **Importing Distance Matrix**
+
+The code chunk below uses *read_cvs()* of **readr** package to import `OD_Matrix.csv` into RStudio. The imported object is a tibble data.frame called `ODMatrix`.
+
 ```{r}
 ODMatrix <- read_csv("data/aspatial/OD_Matrix.csv", skip = 0)
 ```
+
+## **Tidying distance matrix**
+
+The imported ODMatrix organised the distance matrix columnwise.
+
+The rows represent **origins** (i.e. also know as **from** field) and the columns represent **destination** (i.e. also known as **to** field.)
+
+The code chunk below uses *spread()* of **tidyr** package is used to transform the O-D matrix from a thin format into a fat format.
 
 ```{r}
 distmat <- ODMatrix %>%
@@ -166,11 +178,21 @@ distmat <- ODMatrix %>%
   select(c(-c('origin_id')))
 ```
 
+Note: Since tidyr version 1.0 a new function called [*pivot_wider()*](https://tidyr.tidyverse.org/reference/pivot_wider.html) is introduce. You should use *pivot_wider()* instead of *spread()*
+
+Currently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit f measurement from metre to kilometre.
+
 ```{r}
 distmat_km <- as.matrix(distmat/1000)
 ```
 
 # Modelling and Visualising Accessibility using Hansen Method
+
+## **Computing Hansen’s accessibility**
+
+Now, we ready to compute Hansen’s accessibility by using *ac()* of [**SpatialAcc**](https://cran.r-project.org/web/packages/SpatialAcc/) package. Before getting started, you are encourage to read the [arguments](https://cran.r-project.org/web/packages/SpatialAcc/SpatialAcc.pdf) of the function at least once in order to ensure that the required inputs are available.
+
+The code chunk below calculates Hansen’s accessibility using *ac()* of **SpatialAcc** and *data.frame()* is used to save the output in a data frame called `acc_Handsen`.
 
 ```{r}
 acc_Hansen <- data.frame(ac(hexagons$demand,
@@ -181,23 +203,52 @@ acc_Hansen <- data.frame(ac(hexagons$demand,
                             family = "Hansen"))
 ```
 
+The default field name is very messy, we will rename it to `accHansen` by using the code chunk below.
+
 ```{r}
 colnames(acc_Hansen) <- "accHansen"
 ```
+
+Next, we will convert the data table into tibble format by using the code chunk below.
 
 ```{r}
 acc_Hansen <- tbl_df(acc_Hansen)
 ```
 
+Lastly, *bind_cols()* of dplyr will be used to join the acc_Hansen tibble data frame with the hexagons simple feature data frame. The output is called `hexagon_Hansen`.
+
 ```{r}
+hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
+```
+
+hexagon_Hansen is a simple feature data frame and not a typical tibble data frame.
+
+Actually, the steps above can be perform by using a single code chunk as shown below.
+
+```{r}
+acc_Hansen <- data.frame(ac(hexagons$demand,
+                            eldercare$capacity,
+                            distmat_km, 
+                            #d0 = 50,
+                            power = 0.5, 
+                            family = "Hansen"))
+
+colnames(acc_Hansen) <- "accHansen"
+acc_Hansen <- tbl_df(acc_Hansen)
 hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
 ```
 
 ## Visualising Hansen's Accessibility
 
+### Extracting map extend
+
+Firstly, we will extract the extend of `hexagons` simple feature data frame by by using *st_bbox()* of **sf** package.
+
 ```{r}
 mapex <- st_bbox(hexagons)
 ```
+
+The code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore.
 
 ```{r}
 tmap_mode("plot")
@@ -225,6 +276,10 @@ tm_shape(eldercare) +
 ```
 
 ## Statistical Graphic Visualisation
+
+In this section, we are going to compare the distribution of Hansen’s accessibility values by URA Planning Region.
+
+Firstly, we need to add the planning region field into *haxegon_Hansen* simple feature data frame by using the code chunk below.
 
 ```{r}
 hexagon_Hansen <- st_join(hexagon_Hansen, mpsz, 

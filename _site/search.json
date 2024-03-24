@@ -998,14 +998,14 @@
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#visualising-hansens-accessibility",
     "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Visualising Hansen’s Accessibility",
-    "text": "Visualising Hansen’s Accessibility\n\nmapex <- st_bbox(hexagons)\n\n\ntmap_mode(\"plot\")\ntm_shape(hexagon_Hansen,\n         bbox = mapex) + \n  tm_fill(col = \"accHansen\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: Hansen method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 6),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
+    "text": "Visualising Hansen’s Accessibility\n\nExtracting map extend\nFirstly, we will extract the extend of hexagons simple feature data frame by by using st_bbox() of sf package.\n\nmapex <- st_bbox(hexagons)\n\nThe code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore.\n\ntmap_mode(\"plot\")\ntm_shape(hexagon_Hansen,\n         bbox = mapex) + \n  tm_fill(col = \"accHansen\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: Hansen method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 6),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation",
     "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#statistical-graphic-visualisation",
     "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Statistical Graphic Visualisation",
-    "text": "Statistical Graphic Visualisation\n\nhexagon_Hansen <- st_join(hexagon_Hansen, mpsz, \n                          join = st_intersects)\n\n\nggplot(data=hexagon_Hansen, \n       aes(y = log(accHansen), \n           x= REGION_N)) +\n  geom_boxplot() +\n  geom_point(stat=\"summary\", \n             fun.y=\"mean\", \n             colour =\"red\", \n             size=2)"
+    "text": "Statistical Graphic Visualisation\nIn this section, we are going to compare the distribution of Hansen’s accessibility values by URA Planning Region.\nFirstly, we need to add the planning region field into haxegon_Hansen simple feature data frame by using the code chunk below.\n\nhexagon_Hansen <- st_join(hexagon_Hansen, mpsz, \n                          join = st_intersects)\n\n\nggplot(data=hexagon_Hansen, \n       aes(y = log(accHansen), \n           x= REGION_N)) +\n  geom_boxplot() +\n  geom_point(stat=\"summary\", \n             fun.y=\"mean\", \n             colour =\"red\", \n             size=2)"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-kd2sfcas-accessibility",
@@ -1083,5 +1083,26 @@
     "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
     "section": "Cleaning and updating attribute fields of the geospatial data",
     "text": "Cleaning and updating attribute fields of the geospatial data\nThere are many redundant fields in the data tables of both eldercare and hexagons. The code chunks below will be used to exclude those redundant fields. At the same time, a new field called demand and a new field called capacity will be added into the data table of hexagons and eldercare sf data frame respectively. Both fields are derive using mutate() of dplyr package.\n\neldercare <- eldercare %>%\n  select(fid, ADDRESSPOS) %>%\n  mutate(capacity = 100)\n\n\nhexagons <- hexagons %>%\n  select(fid) %>%\n  mutate(demand = 100)\n\nNotice that for the purpose of this hands-on exercise, a constant value of 100 is used. In practice, actual demand of the hexagon and capacity of the eldercare centre should be used."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#importing-distance-matrix",
+    "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#importing-distance-matrix",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
+    "section": "Importing Distance Matrix",
+    "text": "Importing Distance Matrix\nThe code chunk below uses read_cvs() of readr package to import OD_Matrix.csv into RStudio. The imported object is a tibble data.frame called ODMatrix.\n\nODMatrix <- read_csv(\"data/aspatial/OD_Matrix.csv\", skip = 0)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#tidying-distance-matrix",
+    "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#tidying-distance-matrix",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
+    "section": "Tidying distance matrix",
+    "text": "Tidying distance matrix\nThe imported ODMatrix organised the distance matrix columnwise.\nThe rows represent origins (i.e. also know as from field) and the columns represent destination (i.e. also known as to field.)\nThe code chunk below uses spread() of tidyr package is used to transform the O-D matrix from a thin format into a fat format.\n\ndistmat <- ODMatrix %>%\n  select(origin_id, destination_id, total_cost) %>%\n  spread(destination_id, total_cost)%>%\n  select(c(-c('origin_id')))\n\nNote: Since tidyr version 1.0 a new function called pivot_wider() is introduce. You should use pivot_wider() instead of spread()\nCurrently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit f measurement from metre to kilometre.\n\ndistmat_km <- as.matrix(distmat/1000)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-hansens-accessibility",
+    "href": "Hands-on_Ex/Hands-on_Ex10/Hands-on_Ex10.html#computing-hansens-accessibility",
+    "title": "Hands on Exercise 10: Modelling Geographical Accessibility",
+    "section": "Computing Hansen’s accessibility",
+    "text": "Computing Hansen’s accessibility\nNow, we ready to compute Hansen’s accessibility by using ac() of SpatialAcc package. Before getting started, you are encourage to read the arguments of the function at least once in order to ensure that the required inputs are available.\nThe code chunk below calculates Hansen’s accessibility using ac() of SpatialAcc and data.frame() is used to save the output in a data frame called acc_Handsen.\n\nacc_Hansen <- data.frame(ac(hexagons$demand,\n                            eldercare$capacity,\n                            distmat_km, \n                            #d0 = 50,\n                            power = 2, \n                            family = \"Hansen\"))\n\nThe default field name is very messy, we will rename it to accHansen by using the code chunk below.\n\ncolnames(acc_Hansen) <- \"accHansen\"\n\nNext, we will convert the data table into tibble format by using the code chunk below.\n\nacc_Hansen <- tbl_df(acc_Hansen)\n\nLastly, bind_cols() of dplyr will be used to join the acc_Hansen tibble data frame with the hexagons simple feature data frame. The output is called hexagon_Hansen.\n\nhexagon_Hansen <- bind_cols(hexagons, acc_Hansen)\n\nhexagon_Hansen is a simple feature data frame and not a typical tibble data frame.\nActually, the steps above can be perform by using a single code chunk as shown below.\n\nacc_Hansen <- data.frame(ac(hexagons$demand,\n                            eldercare$capacity,\n                            distmat_km, \n                            #d0 = 50,\n                            power = 0.5, \n                            family = \"Hansen\"))\n\ncolnames(acc_Hansen) <- \"accHansen\"\nacc_Hansen <- tbl_df(acc_Hansen)\nhexagon_Hansen <- bind_cols(hexagons, acc_Hansen)"
   }
 ]
