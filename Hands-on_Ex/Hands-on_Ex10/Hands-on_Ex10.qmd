@@ -286,6 +286,8 @@ hexagon_Hansen <- st_join(hexagon_Hansen, mpsz,
                           join = st_intersects)
 ```
 
+Next, *ggplot()* will be used to plot the distribution by using boxplot graphical method.
+
 ```{r}
 ggplot(data=hexagon_Hansen, 
        aes(y = log(accHansen), 
@@ -295,11 +297,15 @@ ggplot(data=hexagon_Hansen,
              fun.y="mean", 
              colour ="red", 
              size=2)
+
 ```
 
 # Modelling and Visualising Accessibility using KD2SFCA Method
 
 ## Computing KD2SFCA’s accessibility
+
+In this section, you are going to repeat most of the steps you had learned in previous section to perform the analysis. However, some of the codes will be combined into one code chunk.\
+The code chunk below calculates Hansen’s accessibility using *ac()* of **SpatialAcc** and *data.frame()* is used to save the output in a data frame called `acc_KD2SFCA`. Notice that `KD2SFCA` is used for family argument.
 
 ```{r}
 acc_KD2SFCA <- data.frame(ac(hexagons$demand,
@@ -315,6 +321,8 @@ hexagon_KD2SFCA <- bind_cols(hexagons, acc_KD2SFCA)
 ```
 
 ## Visualising KD2SFCA’s accessibility
+
+The code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that `mapex` is reused for *bbox* argument.
 
 ```{r}
 tmap_mode("plot")
@@ -343,10 +351,16 @@ tm_shape(eldercare) +
 
 ## Statistical Graphic Visualisation
 
+Now, we are going to compare the distribution of KD2CFA accessibility values by URA Planning Region.
+
+Firstly, we need to add the planning region field into *hexagon_KD2SFCA* simple feature data frame by using the code chunk below.
+
 ```{r}
 hexagon_KD2SFCA <- st_join(hexagon_KD2SFCA, mpsz, 
                           join = st_intersects)
 ```
+
+Next, ggplot() will be used to plot the distribution by using boxplot graphical method.
 
 ```{r}
 ggplot(data=hexagon_KD2SFCA, 
@@ -363,6 +377,9 @@ ggplot(data=hexagon_KD2SFCA,
 
 ## Computing SAM accessibility
 
+In this section, you are going to repeat most of the steps you had learned in previous section to perform the analysis. However, some of the codes will be combined into one code chunk.\
+The code chunk below calculates Hansen’s accessibility using *ac()* of **SpatialAcc** and *data.frame()* is used to save the output in a data frame called `acc_SAM`. Notice that `SAM` is used for family argument.
+
 ```{r}
 acc_SAM <- data.frame(ac(hexagons$demand,
                          eldercare$capacity,
@@ -377,6 +394,8 @@ hexagon_SAM <- bind_cols(hexagons, acc_SAM)
 ```
 
 ## Visualising SAM’s accessibility
+
+The code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that `mapex` is reused for *bbox* argument.
 
 ```{r}
 tmap_mode("plot")
@@ -405,10 +424,16 @@ tm_shape(eldercare) +
 
 ## Statistical Graphic Visualisation
 
+Now, we are going to compare the distribution of SAM accessibility values by URA Planning Region.
+
+Firstly, we need to add the planning region field into *hexagon_SAM* simple feature data frame by using the code chunk below.
+
 ```{r}
 hexagon_SAM <- st_join(hexagon_SAM, mpsz, 
                        join = st_intersects)
 ```
+
+Next, ggplot() will be used to plot the distribution by using boxplot graphical method.
 
 ```{r}
 ggplot(data=hexagon_SAM, 

@@ -630,6 +630,7 @@ PROJCRS["SVY21 / Singapore TM",
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>hexagon_Hansen <span class="ot">&lt;-</span> <span class="fu">st_join</span>(hexagon_Hansen, mpsz, </span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">join =</span> st_intersects)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Next,&nbsp;<em>ggplot()</em>&nbsp;will be used to plot the distribution by using boxplot graphical method.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>hexagon_Hansen, </span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">log</span>(accHansen), </span>
@@ -649,6 +650,8 @@ PROJCRS["SVY21 / Singapore TM",
 <h1>Modelling and Visualising Accessibility using KD2SFCA Method</h1>
 <section id="computing-kd2sfcas-accessibility" class="level2">
 <h2 class="anchored" data-anchor-id="computing-kd2sfcas-accessibility">Computing KD2SFCA’s accessibility</h2>
+<p>In this section, you are going to repeat most of the steps you had learned in previous section to perform the analysis. However, some of the codes will be combined into one code chunk.<br>
+The code chunk below calculates Hansen’s accessibility using&nbsp;<em>ac()</em>&nbsp;of&nbsp;<strong>SpatialAcc</strong>&nbsp;and&nbsp;<em>data.frame()</em>&nbsp;is used to save the output in a data frame called&nbsp;<code>acc_KD2SFCA</code>. Notice that&nbsp;<code>KD2SFCA</code>&nbsp;is used for family argument.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>acc_KD2SFCA <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">ac</span>(hexagons<span class="sc">$</span>demand,</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>                            eldercare<span class="sc">$</span>capacity,</span>
@@ -664,6 +667,7 @@ PROJCRS["SVY21 / Singapore TM",
 </section>
 <section id="visualising-kd2sfcas-accessibility" class="level2">
 <h2 class="anchored" data-anchor-id="visualising-kd2sfcas-accessibility">Visualising KD2SFCA’s accessibility</h2>
+<p>The code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that&nbsp;<code>mapex</code>&nbsp;is reused for&nbsp;<em>bbox</em>&nbsp;argument.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>)</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(hexagon_KD2SFCA,</span>
@@ -694,10 +698,13 @@ PROJCRS["SVY21 / Singapore TM",
 </section>
 <section id="statistical-graphic-visualisation-1" class="level2">
 <h2 class="anchored" data-anchor-id="statistical-graphic-visualisation-1">Statistical Graphic Visualisation</h2>
+<p>Now, we are going to compare the distribution of KD2CFA accessibility values by URA Planning Region.</p>
+<p>Firstly, we need to add the planning region field into <em>hexagon_KD2SFCA</em> simple feature data frame by using the code chunk below.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>hexagon_KD2SFCA <span class="ot">&lt;-</span> <span class="fu">st_join</span>(hexagon_KD2SFCA, mpsz, </span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">join =</span> st_intersects)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Next, ggplot() will be used to plot the distribution by using boxplot graphical method.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>hexagon_KD2SFCA, </span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">y =</span> accKD2SFCA, </span>
@@ -717,6 +724,8 @@ PROJCRS["SVY21 / Singapore TM",
 <h1>Modelling and Visualising Accessibility using Spatial Accessibility Measure (SAM) Method</h1>
 <section id="computing-sam-accessibility" class="level2">
 <h2 class="anchored" data-anchor-id="computing-sam-accessibility">Computing SAM accessibility</h2>
+<p>In this section, you are going to repeat most of the steps you had learned in previous section to perform the analysis. However, some of the codes will be combined into one code chunk.<br>
+The code chunk below calculates Hansen’s accessibility using&nbsp;<em>ac()</em>&nbsp;of&nbsp;<strong>SpatialAcc</strong>&nbsp;and&nbsp;<em>data.frame()</em>&nbsp;is used to save the output in a data frame called&nbsp;<code>acc_SAM</code>. Notice that&nbsp;<code>SAM</code>&nbsp;is used for family argument.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>acc_SAM <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">ac</span>(hexagons<span class="sc">$</span>demand,</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>                         eldercare<span class="sc">$</span>capacity,</span>
@@ -732,6 +741,7 @@ PROJCRS["SVY21 / Singapore TM",
 </section>
 <section id="visualising-sams-accessibility" class="level2">
 <h2 class="anchored" data-anchor-id="visualising-sams-accessibility">Visualising SAM’s accessibility</h2>
+<p>The code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that&nbsp;<code>mapex</code>&nbsp;is reused for&nbsp;<em>bbox</em>&nbsp;argument.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>)</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(hexagon_SAM,</span>
@@ -762,10 +772,13 @@ PROJCRS["SVY21 / Singapore TM",
 </section>
 <section id="statistical-graphic-visualisation-2" class="level2">
 <h2 class="anchored" data-anchor-id="statistical-graphic-visualisation-2">Statistical Graphic Visualisation</h2>
+<p>Now, we are going to compare the distribution of SAM accessibility values by URA Planning Region.</p>
+<p>Firstly, we need to add the planning region field into <em>hexagon_SAM</em> simple feature data frame by using the code chunk below.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>hexagon_SAM <span class="ot">&lt;-</span> <span class="fu">st_join</span>(hexagon_SAM, mpsz, </span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">join =</span> st_intersects)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Next, ggplot() will be used to plot the distribution by using boxplot graphical method.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>hexagon_SAM, </span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">y =</span> accSAM, </span>
