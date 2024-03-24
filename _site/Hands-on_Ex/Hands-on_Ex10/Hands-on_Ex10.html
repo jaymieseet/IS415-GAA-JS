@@ -263,6 +263,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#the-data" id="toc-the-data" class="nav-link" data-scroll-target="#the-data"><strong>The data</strong></a></li>
   </ul></li>
   <li><a href="#install-packages-into-r-environment" id="toc-install-packages-into-r-environment" class="nav-link" data-scroll-target="#install-packages-into-r-environment">Install Packages into R environment</a></li>
+  <li><a href="#geospatial-data-wrangling" id="toc-geospatial-data-wrangling" class="nav-link" data-scroll-target="#geospatial-data-wrangling">Geospatial Data Wrangling</a>
+  <ul class="collapse">
+  <li><a href="#importing-geospatial-data" id="toc-importing-geospatial-data" class="nav-link" data-scroll-target="#importing-geospatial-data">Importing Geospatial Data</a></li>
+  <li><a href="#updating-crs-information" id="toc-updating-crs-information" class="nav-link" data-scroll-target="#updating-crs-information">Updating CRS Information</a></li>
+  <li><a href="#cleaning-and-updating-attribute-fields-of-the-geospatial-data" id="toc-cleaning-and-updating-attribute-fields-of-the-geospatial-data" class="nav-link" data-scroll-target="#cleaning-and-updating-attribute-fields-of-the-geospatial-data"><strong>Cleaning and updating attribute fields of the geospatial data</strong></a></li>
+  </ul></li>
   <li><a href="#aspatial-data-wrangling" id="toc-aspatial-data-wrangling" class="nav-link" data-scroll-target="#aspatial-data-wrangling">Aspatial Data Wrangling</a></li>
   <li><a href="#modelling-and-visualising-accessibility-using-hansen-method" id="toc-modelling-and-visualising-accessibility-using-hansen-method" class="nav-link" data-scroll-target="#modelling-and-visualising-accessibility-using-hansen-method">Modelling and Visualising Accessibility using Hansen Method</a>
   <ul class="collapse">
@@ -379,6 +385,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>               ggstatsplot, reshape2,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>               tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Notice that with tidyverse, we do not have to install readr, dplyr and ggplots packages separately. In fact, tidyverse also installs other R packages such as tidyr, stringr, forcats, tibble, purrr and magrittr.</p>
+</section>
+<section id="geospatial-data-wrangling" class="level1">
+<h1>Geospatial Data Wrangling</h1>
+<section id="importing-geospatial-data" class="level2">
+<h2 class="anchored" data-anchor-id="importing-geospatial-data">Importing Geospatial Data</h2>
+<p>Three geospatial data will be imported from the <em>data/geospatial</em> sub-folder. They are MP14_SUBZONE_NO_SEA_PL, hexagons and ELDERCARE.</p>
+<p>The code chunk below is used to import these three data sets shapefile by using <em>st_read()</em> of <strong>sf</strong> packages.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>, <span class="at">layer =</span> <span class="st">"MP14_SUBZONE_NO_SEA_PL"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -418,11 +432,18 @@ Bounding box:  xmin: 14481.92 ymin: 28218.43 xmax: 41665.14 ymax: 46804.9
 Projected CRS: SVY21 / Singapore TM</code></pre>
 </div>
 </div>
+<p>The report above shows that the R object used to contain the imported MP14_SUBZONE_WEB_PL shapefile is called&nbsp;<em>mpsz</em>&nbsp;and it is a simple feature object. The geometry type is&nbsp;<em>multipolygon</em>. it is also important to note that mpsz simple feature object does not have EPSG information.</p>
+</section>
+<section id="updating-crs-information" class="level2">
+<h2 class="anchored" data-anchor-id="updating-crs-information">Updating CRS Information</h2>
+<p>The code chunk below updates the newly imported&nbsp;<em>mpsz</em>&nbsp;with the correct ESPG code (i.e.&nbsp;3414)</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(mpsz, <span class="dv">3414</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>eldercare <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(eldercare, <span class="dv">3414</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>hexagons <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(hexagons, <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>After transforming the projection metadata, you can verify the projection of the newly transformed <em>mpsz_svy21</em> by using <em>st_crs()</em> of sf package.</p>
+<p>The code chunk below will be used to varify the newly transformed <em>mpsz_svy21</em>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -469,6 +490,11 @@ PROJCRS["SVY21 / Singapore TM",
     ID["EPSG",3414]]</code></pre>
 </div>
 </div>
+<p>Notice that the EPSG: is indicated as&nbsp;<em>3414</em>&nbsp;now.</p>
+</section>
+<section id="cleaning-and-updating-attribute-fields-of-the-geospatial-data" class="level2">
+<h2 class="anchored" data-anchor-id="cleaning-and-updating-attribute-fields-of-the-geospatial-data"><strong>Cleaning and updating attribute fields of the geospatial data</strong></h2>
+<p>There are many redundant fields in the data tables of both <code>eldercare</code> and <code>hexagons</code>. The code chunks below will be used to exclude those redundant fields. At the same time, a new field called <code>demand</code> and a new field called <code>capacity</code> will be added into the data table of <code>hexagons</code> and <code>eldercare</code> sf data frame respectively. Both fields are derive using <em>mutate()</em> of <strong>dplyr</strong> package.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>eldercare <span class="ot">&lt;-</span> eldercare <span class="sc">%&gt;%</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(fid, ADDRESSPOS) <span class="sc">%&gt;%</span></span>
@@ -479,6 +505,8 @@ PROJCRS["SVY21 / Singapore TM",
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(fid) <span class="sc">%&gt;%</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">demand =</span> <span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Notice that for the purpose of this hands-on exercise, a constant value of 100 is used. In practice, actual demand of the hexagon and capacity of the eldercare centre should be used.</p>
+</section>
 </section>
 <section id="aspatial-data-wrangling" class="level1">
 <h1>Aspatial Data Wrangling</h1>

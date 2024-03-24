@@ -91,6 +91,16 @@ pacman::p_load(tmap, SpatialAcc, sf,
 
 ```
 
+Notice that with tidyverse, we do not have to install readr, dplyr and ggplots packages separately. In fact, tidyverse also installs other R packages such as tidyr, stringr, forcats, tibble, purrr and magrittr.
+
+# Geospatial Data Wrangling
+
+## Importing Geospatial Data
+
+Three geospatial data will be imported from the *data/geospatial* sub-folder. They are MP14_SUBZONE_NO_SEA_PL, hexagons and ELDERCARE.
+
+The code chunk below is used to import these three data sets shapefile by using *st_read()* of **sf** packages.
+
 ```{r}
 mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_NO_SEA_PL")
 ```
@@ -103,15 +113,31 @@ hexagons <- st_read(dsn = "data/geospatial", layer = "hexagons")
 eldercare <- st_read(dsn = "data/geospatial", layer = "ELDERCARE") 
 ```
 
+The report above shows that the R object used to contain the imported MP14_SUBZONE_WEB_PL shapefile is called *mpsz* and it is a simple feature object. The geometry type is *multipolygon*. it is also important to note that mpsz simple feature object does not have EPSG information.
+
+## Updating CRS Information
+
+The code chunk below updates the newly imported *mpsz* with the correct ESPG code (i.e. 3414)
+
 ```{r}
 mpsz <- st_transform(mpsz, 3414)
 eldercare <- st_transform(eldercare, 3414)
 hexagons <- st_transform(hexagons, 3414)
 ```
 
+After transforming the projection metadata, you can verify the projection of the newly transformed *mpsz_svy21* by using *st_crs()* of sf package.
+
+The code chunk below will be used to varify the newly transformed *mpsz_svy21*.
+
 ```{r}
 st_crs(mpsz)
 ```
+
+Notice that the EPSG: is indicated as *3414* now.
+
+## **Cleaning and updating attribute fields of the geospatial data**
+
+There are many redundant fields in the data tables of both `eldercare` and `hexagons`. The code chunks below will be used to exclude those redundant fields. At the same time, a new field called `demand` and a new field called `capacity` will be added into the data table of `hexagons` and `eldercare` sf data frame respectively. Both fields are derive using *mutate()* of **dplyr** package.
 
 ```{r}
 eldercare <- eldercare %>%
@@ -124,6 +150,8 @@ hexagons <- hexagons %>%
   select(fid) %>%
   mutate(demand = 100)
 ```
+
+Notice that for the purpose of this hands-on exercise, a constant value of 100 is used. In practice, actual demand of the hexagon and capacity of the eldercare centre should be used.
 
 # Aspatial Data Wrangling
 
