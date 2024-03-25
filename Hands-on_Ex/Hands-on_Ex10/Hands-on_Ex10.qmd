@@ -48,7 +48,7 @@ Four data sets will be used in this hands-on exercise, they are:
 
     -   `total_cost`: the summation of `entry_cost`, `network_cost` and `exit_cost`.
 
-All the values of the cost related fields are in **metres**.
+All the values of the cost related fields are in **metres** (we need it to be in this unit of measurement because it will affect the accessiblity index).
 
 **Reminder:** *Except `MP14_SUBZONE_NO_SEA_PL` data set, the other three data set are specially prepared by Prof. Kam for teaching and research purpose. Students taking IS415 Geospatial Analytics and Applications are allowed to use them for hands-on exercise purpose. Please obtain formal approval from Prof. Kam if you want to use them for other courses or usage.*
 
@@ -180,7 +180,7 @@ distmat <- ODMatrix %>%
 
 Note: Since tidyr version 1.0 a new function called [*pivot_wider()*](https://tidyr.tidyverse.org/reference/pivot_wider.html) is introduce. You should use *pivot_wider()* instead of *spread()*
 
-Currently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit f measurement from metre to kilometre.
+Currently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit measurement from metre to kilometre. We also use as.matrix() to convert it into matrix form.
 
 ```{r}
 distmat_km <- as.matrix(distmat/1000)
@@ -445,3 +445,5 @@ ggplot(data=hexagon_SAM,
              colour ="red", 
              size=2)
 ```
+
+This is a high-level aggregation that we should analyse before we decide which planning area or region we want to focus one. If we want to analyse the skewness of the data, we can use a histogram instead.

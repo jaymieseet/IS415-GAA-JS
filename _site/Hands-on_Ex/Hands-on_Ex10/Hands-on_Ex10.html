@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2024-03-24">
+<meta name="dcterms.date" content="2024-03-25">
 
 <title>IS415-GAA-JS - Hands on Exercise 10: Modelling Geographical Accessibility</title>
 <style>
@@ -229,7 +229,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
  <span class="dropdown-text">Take Home Exercise 2</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../Take-home_Ex/Take-home_Ex02/Take-home_Ex03.html">
+    <a class="dropdown-item" href="../../Take-home_Ex/Take-home_Ex03/Take_home_Ex03.html">
  <span class="dropdown-text">Take Home Exercise 3</span></a>
   </li>  
     </ul>
@@ -314,7 +314,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">March 24, 2024</p>
+      <p class="date">March 25, 2024</p>
     </div>
   </div>
     
@@ -353,7 +353,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><p><code>total_cost</code>: the summation of <code>entry_cost</code>, <code>network_cost</code> and <code>exit_cost</code>.</p></li>
 </ul></li>
 </ul>
-<p>All the values of the cost related fields are in <strong>metres</strong>.</p>
+<p>All the values of the cost related fields are in <strong>metres</strong> (we need it to be in this unit of measurement because it will affect the accessiblity index).</p>
 <p><strong>Reminder:</strong> <em>Except <code>MP14_SUBZONE_NO_SEA_PL</code> data set, the other three data set are specially prepared by Prof.&nbsp;Kam for teaching and research purpose. Students taking IS415 Geospatial Analytics and Applications are allowed to use them for hands-on exercise purpose. Please obtain formal approval from Prof.&nbsp;Kam if you want to use them for other courses or usage.</em></p>
 </section>
 </section>
@@ -537,7 +537,7 @@ PROJCRS["SVY21 / Singapore TM",
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="st">'origin_id'</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Note: Since tidyr version 1.0 a new function called <a href="https://tidyr.tidyverse.org/reference/pivot_wider.html"><em>pivot_wider()</em></a> is introduce. You should use <em>pivot_wider()</em> instead of <em>spread()</em></p>
-<p>Currently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit f measurement from metre to kilometre.</p>
+<p>Currently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit measurement from metre to kilometre. We also use as.matrix() to convert it into matrix form.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>distmat_km <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(distmat<span class="sc">/</span><span class="dv">1000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -792,6 +792,7 @@ The code chunk below calculates Hansen’s accessibility using&nbsp;<em>ac()</em
 <p><img src="Hands-on_Ex10_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>This is a high-level aggregation that we should analyse before we decide which planning area or region we want to focus one. If we want to analyse the skewness of the data, we can use a histogram instead.</p>
 
 
 </section>
