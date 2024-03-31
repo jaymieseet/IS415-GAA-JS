@@ -44,40 +44,34 @@ rownames(dist) <- paste0(sz_names)
 ```
 
 ```{r}
-#| eval: False
 distPair <- melt(dist) %>%
   rename(dist = value)
 head(distPair, 10)
 ```
 
 ```{r}
-#| eval: False
 distPair %>%
   filter(dist > 0) %>%
   summary()
 ```
 
 ```{r}
-#| eval: False
 distPair$dist <- ifelse(distPair$dist == 0,
                         50, distPair$dist)
 ```
 
 ```{r}
-#| eval: False
 distPair %>%
   summary()
 ```
 
 ```{r}
-#| eval: False
 distPair <- distPair %>%
   rename(orig = Var1,
          dest = Var2)
 ```
 
 ```{r}
-#| eval: False
 write_rds(distPair, "data/rds/distPair.rds") 
 ```
 
@@ -184,6 +178,69 @@ write_rds(od_data, "data/rds/od_data_fii.rds")
 
 ```{r}
 od_data_fii <- read_rds("data/rds/od_data_fii.rds")
+```
+
+```{r}
+flow_data <- od_data_fii %>%
+  group_by(ORIGIN_SZ, DESTIN_SZ) %>% 
+  summarize(TRIPS = sum(MORNING_PEAK)) 
+```
+
+```{r}
+head(flow_data, 10)
+```
+
+```{r}
+flow_data$FlowNoIntra <- ifelse(
+  flow_data$ORIGIN_SZ == flow_data$DESTIN_SZ, 
+  0, flow_data$TRIPS)
+flow_data$offset <- ifelse(
+  flow_data$ORIGIN_SZ == flow_data$DESTIN_SZ, 
+  0.000001, 1)
+```
+
+```{r}
+flow_data$ORIGIN_SZ <- as.factor(flow_data$ORIGIN_SZ)
+flow_data$DESTIN_SZ <- as.factor(flow_data$DESTIN_SZ)
+```
+
+```{r}
+flow_data1 <- flow_data %>%
+  left_join (distPair,
+             by = c("ORIGIN_SZ" = "orig",
+                    "DESTIN_SZ" = "dest"))
+```
+
+```{r}
+pop <- read_csv("data/aspatial/pop.csv")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 
 ```{r}
