@@ -86,34 +86,104 @@ distPair <- read_rds("data/rds/distPair.rds")
 ```
 
 ```{r}
+#| eval: False
 odbus <- read_csv("data/aspatial/origin_destination_bus_202210.csv")
 
 ```
 
 ```{r}
+#| eval: False
 busstop <- st_read(dsn = "data/geospatial",
                    layer = "BusStop") %>%
   st_transform(crs = 3414)
 ```
 
 ```{r}
-
+#| eval: False
+busstop_mpsz <- st_intersection(busstop, mpsz) %>%
+  select(BUS_STOP_N, SUBZONE_C) %>%
+  st_drop_geometry()
 ```
 
 ```{r}
-
+#| eval: False
+odbus <- read_csv("data/aspatial/origin_destination_bus_202210.csv")
 ```
 
 ```{r}
-
+#| eval: False
+odbus$ORIGIN_PT_CODE <- as.factor(odbus$ORIGIN_PT_CODE)
+odbus$DESTINATION_PT_CODE <- as.factor(odbus$DESTINATION_PT_CODE) 
 ```
 
 ```{r}
-
+#| eval: False
+odbus6_9 <- odbus %>%
+  filter(DAY_TYPE == "WEEKDAY") %>%
+  filter(TIME_PER_HOUR >= 6 &
+           TIME_PER_HOUR <= 9) %>%
+  group_by(ORIGIN_PT_CODE,
+           DESTINATION_PT_CODE) %>%
+  summarise(TRIPS = sum(TOTAL_TRIPS))
 ```
 
 ```{r}
+#| eval: False
+od_data <- left_join(odbus6_9 , busstop_mpsz,
+            by = c("ORIGIN_PT_CODE" = "BUS_STOP_N")) %>%
+  rename(ORIGIN_BS = ORIGIN_PT_CODE,
+         ORIGIN_SZ = SUBZONE_C,
+         DESTIN_BS = DESTINATION_PT_CODE)
+```
 
+```{r}
+#| eval: False
+duplicate <- od_data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+```
+
+```{r}
+#| eval: False
+od_data <- unique(od_data)
+```
+
+```{r}
+#| eval: False
+od_data <- left_join(od_data , busstop_mpsz,
+            by = c("DESTIN_BS" = "BUS_STOP_N")) 
+```
+
+```{r}
+#| eval: False
+duplicate <- od_data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+```
+
+```{r}
+#| eval: False
+od_data <- unique(od_data)
+```
+
+```{r}
+#| eval: False
+od_data <- od_data %>%
+  rename(DESTIN_SZ = SUBZONE_C) %>%
+  drop_na() %>%
+  group_by(ORIGIN_SZ, DESTIN_SZ) %>%
+  summarise(MORNING_PEAK = sum(TRIPS))
+```
+
+```{r}
+#| eval: False
+write_rds(od_data, "data/rds/od_data_fii.rds")
+```
+
+```{r}
+od_data_fii <- read_rds("data/rds/od_data_fii.rds")
 ```
 
 ```{r}
