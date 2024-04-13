@@ -43,7 +43,7 @@ The specific tasks of this take-home exercise are as follows:
 # Data Used
 
 | Data Set           | Description                                                                                                      | Source                                                                                                              |
-|---------------|----------------------------|-----------------------------|
+|------------------|---------------------------|----------------------------|
 | `TAIWAN_VILLAGE`   | Geospatial data of the village boundary of Taiwan in ESRI shapefile and in Taiwan's Geographic Coordinate System | [Historical map data of the village boundary: TWD97 longitude and latitude](https://data.gov.tw/en/datasets/130549) |
 | `Dengue_Daily.csv` | Aspatial data of reported dengue cases in Taiwan since 1998.                                                     | [Dengue Daily Confirmed Cases Since 1998](https://data.cdc.gov.tw/en/dataset/dengue-daily-determined-cases-1998)    |
 
@@ -337,7 +337,7 @@ In this section, we will compute Global Moran's I of dengue cases at village lev
 
 After all the data preparation, we can now move on to the Global Spatial Autocorrelation Analysis. Firstly, let's go through what this analysis entails.
 
-Spatial Autocorrelation tool measure the spatial autocorrelation based on both feature locations and feature values simultaneously. The spatial autocorrelation refers to how both the geographic proximity (locations) and attribute similarities (values) of features unfluence each other. It examines whether nearby features tend to have similar attribute values and whether this similarity is statictically significant.
+Spatial Autocorrelation tool measure the spatial autocorrelation based on both feature locations and feature values simultaneously. The spatial autocorrelation refers to how both the geographic proximity (locations) and attribute similarities (values) of features influence each other. It examines whether nearby features tend to have similar attribute values and whether this similarity is statictically significant.
 
 The main objective of this analysis is to apply appropriate spatial statistical methods to discover if the cases are evenly distributed and if not, are there signs of spatial clustering and where are these clusters?
 

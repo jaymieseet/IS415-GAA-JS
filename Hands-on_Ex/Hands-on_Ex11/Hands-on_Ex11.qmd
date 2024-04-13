@@ -1,5 +1,5 @@
 ---
-title: "Hands-On Exercise 11"
+title: "Hands-On Exercise 11: Calibrating Spatial Interaction Models with R"
 execute: 
   eval: true
   echo: true
@@ -11,7 +11,7 @@ date: "`r Sys.Date()`"
 ```{r}
 pacman::p_load(tmap, sf, sp,
                performance, reshape2,
-               ggpubr, tidyverse)
+               ggpubr, tidyverse, DT, stplanr, tidyverse)
 ```
 
 ```{r}
@@ -313,6 +313,12 @@ uncSIM <- glm(formula = TRIPS ~
               data = SIM_data,
               na.action = na.exclude)
 uncSIM
+```
+
+```{r}
+#| eval: FALSE
+tbl_regression(uncSIM,
+                intercept = TRUE)
 ```
 
 ```{r}

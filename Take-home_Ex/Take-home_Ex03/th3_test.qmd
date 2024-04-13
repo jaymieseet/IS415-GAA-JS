@@ -1,0 +1,285 @@
+```{r}
+pacman::p_load(sf, spded, sfdep, tmap, tidyverse, plotly, Kendall)
+```
+
+# Aspatial Data
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+```
+
+```{r}
+head(indo_earthquake)
+```
+
+Given that latitude and longitude data are available for each earthquake event, we aim to transform this geospatial information into a spatial feature (sf) object. Additionally, we intend to convert the coordinate reference system (CRS) of the data to EPSG code 23830, which corresponds to the geographical region of Indonesia.
+
+```{r}
+# Convert to sf object 
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+```
+
+```{r}
+plot(st_geometry(indoEarthq_sf))
+```
+
+In this code chunk, we aim to identify the Indonesian regions experiencing the highest frequency of earthquake events, thereby providing valuable insights into the spatial distribution and patterns of seismic activity within the country.
+
+```{r}
+# Group by the 'remark' column and calculate the count of each type
+remark_counts <- indoEarthq_sf %>%   group_by(remark) %>%   
+  summarise(count = n())  
+# View the resulting count of each type in the 'remark' column 
+```
+
+```{r}
+# Sort the data frame by count in descending order and select the top 10 rows 
+top_5_remark <- remark_counts %>%   
+  arrange(desc(count)) %>%   
+  head(5)  
+# Plot a bar graph 
+ggplot(top_5_remark, 
+       aes(x = remark, y = count)) +   
+       geom_bar(stat = "identity", fill = "orange", width = 0.5) +
+       labs(title = "Top 5 Regions Eathquake Count", 
+       x = "Region",     
+       y = "Count") +
+       theme_minimal() +   
+       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The bar chart reveals that the Java region exhibits a notably high frequency of seismic events. Considering that West Java have a larger population, these seismic occurrences could potentially have a more significant impact on the local communities.
+
+# Geospatial Data
+
+```{r}
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                 layer = "idn_admbnda_adm3_bps_20200401")
+```
+
+In this section, we are filtering out only the regions within West Java from our shapefile to focus our analysis.
+
+```{r}
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+```
+
+```{r}
+west_java <- st_transform(west_java, crs = 23830)
+```
+
+```{r}
+plot(st_geometry(west_java))
+```
+
+Some subdistricts may share the same name but belong to different districts. To ensure uniqueness in our analysis, we concatenate both the subdistrict and district names together to create a distinct identifier.
+
+```{r}
+west_java$subdistrict <- paste(west_java$ADM3_EN, west_java$ADM2_EN, sep = "_")
+```
+
+After obtaining the subdistrict polygons, we use the st_intersection() function to overlay these polygons onto the earthquake points. This process allows us to associate each earthquake point with the corresponding subdistrict polygon, thereby adding the subdistrict information to the earthquake data.
+
+```{r}
+java_earthq <- st_intersection(indoEarthq_sf, west_java)
+java_earthq
+```
+
+```{r}
+length(unique(java_earthq$subdistrict))
+```
+
+We aim to focus our analysis on earthquake events with a magnitude of 3 or higher. This threshold ensures that we concentrate on seismic events that are more significant and potentially impactful on the affected areas, disregarding lower magnitude events that may have minimal consequences.
+
+
+```{r}
+java_choro <- java_earthq %>%
+  filter(mag >=2) %>%
+  group_by(subdistrict) %>%
+  summarise(num_earthquakes = n())
+```
+
+```{r}
+join_java <- st_join(west_java, java_choro, by = "subdistrict")
+  
+```
+
+```{r}
+java_earthq <- java_earthq %>%
+  filter(mag >= 3) %>%
+  mutate(year = as.numeric(year(tgl)),
+         month = month(tgl, label = TRUE, abbr = FALSE),
+         week = as.numeric(week(tgl))) %>%
+  mutate(year_week = paste(year, paste("Week", week, sep = " "), sep = ", ")) %>%
+  filter(year >= 2009, year <= 2023)
+
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(join_java) +
+  tm_fill("num_earthquakes",
+          style = "quantile",
+          palette = "Blues")+
+  tm_borders(alpha=0.5)
+        
+    
+  
+
+```
+
+```{r}
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                     layer = "idn_admbnda_adm3_bps_20200401")
+
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+
+
+west_java <- st_transform(west_java, crs = 23830)
+
+west_java$subdistrict <- paste(west_java$ADM3_EN, west_java$ADM2_EN, sep = "_")
+
+java_earthq <- st_intersection(indoEarthq_sf, west_java)
+
+java_choro <- java_earthq %>%
+    filter(mag >=2) %>%
+    group_by(subdistrict) %>%
+    summarise(num_earthquakes = n())
+
+join_java <- st_join(west_java, java_choro, by = "subdistrict")
+
+tmap_options(check.and.fix = TRUE) +
+      tm_shape(join_java) +
+      tm_fill("num_earthquakes",
+              style = "equal",
+              palette = "Blues")+
+      tm_borders(alpha=0.5)
+
+```
+ 
+```{r}              
+indo_earthquake <- read_csv("data/aspatial/katalog_gempa.csv")
+
+indoEarthq_sf <- st_as_sf(indo_earthquake, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84")  # Transform the geometry to EPSG:23830 
+indoEarthq_sf <- st_transform(indoEarthq_sf, crs = "+init=EPSG:23830")
+
+indonesia <- st_read(dsn = "data/geospatial/idn_adm_bps_20200401_shp", 
+                     layer = "idn_admbnda_adm3_bps_20200401")
+
+west_java <- indonesia[indonesia$ADM1_EN == "Jawa Barat", ]
+
+
+west_java <- st_transform(west_java, crs = 23830)
+
+west_java$subdistrict <- paste(west_java$ADM3_EN, west_java$ADM2_EN, sep = "_")
+
+java_earthq <- st_intersection(indoEarthq_sf, west_java)
+
+```
+
+```{r}
+java_earthq <- java_earthq %>%
+  filter(mag >= 3) %>%
+  mutate(year = as.numeric(year(tgl)),
+         month = month(tgl, label = TRUE, abbr = FALSE),
+         week = as.numeric(week(tgl))) %>%
+  mutate(year_week = paste(year, paste("Week", week, sep = " "), sep = ", ")) %>%
+  filter(year >= 2009, year <= 2023)
+
+```
+
+
+```{r}
+write_rds(java_earthq, "data/rds/java_earthq.rds")
+```
+
+
+```{r}
+java_earthq_count <- java_earthq %>%
+  group_by(subdistrict, year) %>%
+  summarize(total_cases = n()) %>%
+  ungroup() %>%
+  st_drop_geometry()
+```
+
+```{r}
+# Create a vector of all years
+years <- as.numeric(2009:2023)
+
+# Create a template dataframe with all possible combinations of regions, years, and months
+template_df <- expand.grid(subdistrict = unique(west_java$subdistrict),
+                           year = years,
+                           stringsAsFactors = FALSE)
+
+# Left join with original dataframe
+java_eq_df <- left_join(template_df, java_earthq_count, by = c("subdistrict", "year"))
+
+# Replace NA values in total cases column with 0
+java_eq_df$total_cases[is.na(java_eq_df$total_cases)] <- 0
+```
+
+```{r}
+java_eq_df <- as_tibble(java_eq_df)
+```
+
+```{r}
+java_st <- spacetime(.data = java_eq_df, .geo = west_java, "subdistrict", "year")
+
+is_spacetime_cube(java_st)
+```
+
+
+```{r}
+java_nb <- java_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(st_knn(geometry)),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+```
+```{r}
+gi_stars <- java_nb %>% 
+  group_by(year) %>% 
+  mutate(gi_star = local_gstar_perm(
+    total_cases, nb, wt)) %>% 
+  tidyr::unnest(gi_star)
+```
+
+```{r}
+cbg1 <- gi_stars %>% 
+  ungroup() %>% 
+  filter(subdistrict == "Cugenang_Cianjur") |> 
+  select(subdistrict, year, gi_star)
+
+p <- ggplot(data = cbg1, 
+       aes(x = year, 
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+
+
+ggplotly(p)
+```
+```{r}
+ehsa <- emerging_hotspot_analysis(
+  x = java_st, 
+  .var = "total_cases", 
+  k = 1, 
+  nsim = 99
+)
+```
+
+```{r}
+ggplot(data = ehsa, aes(x = classification)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+            

@@ -1,0 +1,147 @@
+---
+title: "Geographically Weighted Predictive Models"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+date: "`r Sys.Date()`"
+---
+
+```{r}
+pacman::p_load(tmap, sf, DT, stplanr, tidyverse, sp, Matrix, spflow, reshape2, knitr, spdep)
+```
+This code will download a newer version of spflow.
+```{r}
+devtools::install_github("LukeCe/spflow")
+```
+
+```{r}
+odbus <- read_csv("data/aspatial/origin_destination_bus_202210.csv")
+```
+This data covers the weekdays and weekends with the origin and destination codes. The codes are in numeric form, whih is not ideal to do left joins. Hence, we need to convert it to factor.
+
+```{r}
+odbus$ORIGIN_PT_CODE <- as.factor(odbus$ORIGIN_PT_CODE)
+odbus$DESTINATION_PT_CODE <- as.factor(odbus$DESTINATION_PT_CODE)
+```
+
+This next code extracts out data that only gives us the morning peak, 6am-10am. We use diplyr functions to filter and get the weekday data and sum up the total number of trips.
+```{r}
+odbus6_9 <- odbus %>%
+  filter(DAY_TYPE == "WEEKDAY") %>%
+  filter(TIME_PER_HOUR >= 6 &
+           TIME_PER_HOUR <= 9) %>%
+  group_by(ORIGIN_PT_CODE,
+           DESTINATION_PT_CODE) %>%
+  summarise(TRIPS = sum(TOTAL_TRIPS))
+```
+
+This is a point layer.
+```{r}
+busstop <- st_read(dsn = "data/geospatial",
+                   layer = "BusStop") %>%
+  st_transform(crs = 3414)
+```
+
+This is a polygon layer, to identify which bus stop is within which subzone.
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+mpsz
+```
+
+Include the planning subzone layer inside the bus stop. We are using st_intersection(). The first input is point, so the output given would be points of the bus stop but include the subzone information.
+```{r}
+busstop_mpsz <- st_intersection(busstop, mpsz) %>%
+  select(BUS_STOP_N, SUBZONE_C) %>%
+  st_drop_geometry()
+```
+
+```{r}
+od_data <- left_join(odbus6_9 , busstop_mpsz,
+            by = c("ORIGIN_PT_CODE" = "BUS_STOP_N")) %>%
+  rename(ORIGIN_BS = ORIGIN_PT_CODE,
+         ORIGIN_SZ = SUBZONE_C,
+         DESTIN_BS = DESTINATION_PT_CODE)
+```
+
+
+```{r}
+duplicate <- od_data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+```
+
+```{r}
+od_data <- unique(od_data)
+```
+
+```{r}
+od_data <- left_join(od_data , busstop_mpsz,
+            by = c("DESTIN_BS" = "BUS_STOP_N")) 
+```
+
+```{r}
+duplicate <- od_data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+```
+
+```{r}
+od_data <- unique(od_data)
+```
+
+```{r}
+duplicate <- od_data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+```
+
+#In-Class Exercise
+
+```{r}
+mpsz_nb <- read_rds("data/rds/mpsz_nb.rds")
+mpsz_flow <- read_rds("data/rds/mpsz_flow.rds")
+mpsz_var <- read_rds("data/rds/mpsz_var.rds")
+```
+
+```{r}
+mpsz_net <- spflow_network(
+  id_net = "sg",
+  node_neighbourhood = nb2mat(mpsz_nb$by_contiguity),
+  node_data = mpsz_var,
+  node_key_column = "SZ_CODE"
+)
+
+mpsz_net
+```
+
+```{r}
+mpsz_net_pairs <- spflow_network_pair(
+  id_orig_net = "sg",
+  id_dest_net = "sg",
+  pair_data = mpsz_flow,
+  orig_key_column = "ORIGIN_SZ",
+  dest_key_column = "DESTIN_SZ"
+)
+
+mpsz_net_pairs
+```
+
+```{r}
+mpsz_multi_net <- spflow_network_multi(mpsz_net,
+                                       mpsz_net_pairs)
+mpsz_multi_net
+```
+
+```{r}
+base_model <- spflow(
+  spflow_formula = log(1 + TRIPS) ~
+    0_(USSTOPS_CBOUNT +
+         AGES25_64+
+         )
+)
